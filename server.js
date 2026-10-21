@@ -21,12 +21,12 @@ try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, private
 
 const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
 
-let db = { users: [], inventory: { damass: 10, copper: 5, cobble: 10, vip: 3 }, orders: [], messages: [], reviews: [] };
+let db = { users: [], inventory: { damass: 10, copper: 5, cobble: 10 }, orders: [], messages: [], reviews: [] };
 
 if (process.env.NETRUN) {
     const dataDir = '/data';
     if (!fs.existsSync(dataDir)) {
-        try { fs.mkdirSync(dataDir); } catch(e) { console.log("Не удалось создать папку /data"); }
+        try { fs.mkdirSync(dataDir); } catch(e) {}
     }
 }
 
@@ -37,7 +37,6 @@ if (fs.existsSync(DB_FILE)) {
         if (!db.orders) db.orders = [];
         if (!db.messages) db.messages = [];
         if (!db.reviews) db.reviews = [];
-        if (!db.inventory) db.inventory = { damass: 10, copper: 5, cobble: 10, vip: 3 };
     } catch (e) {} 
 } else { 
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
@@ -59,6 +58,7 @@ passport.use(new YandexStrategy({
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => { const user = db.users.find(u => u.id === id); done(null, user); });
 
+// Пользовательские API
 app.get('/api/user', (req, res) => {
     if (req.user) res.json({ name: req.user.name, gameNick: req.user.gameNick, avatar: req.user.avatar });
     else res.status(401).json({ error: 'Not logged in' });
@@ -92,31 +92,24 @@ app.get('/api/orders', (req, res) => {
     res.json(db.orders.filter(o => o.userId === req.user.id));
 });
 
-// Обновленный API отзывов (с расчетом статистики)
 app.get('/api/reviews/all', (req, res) => {
     const allReviews = db.reviews.map(r => {
         const user = db.users.find(u => u.id === r.userId);
-        return { id: r.id, userName: user ? user.name : 'Аноним', rating: r.rating, text: r.text, itemId: r.itemId, date: r.date };
+        return { 
+            id: r.id, 
+            userName: user ? (user.gameNick || 'Игрок') : 'Аноним', 
+            rating: r.rating, text: r.text, itemId: r.itemId, date: r.date 
+        };
     });
 
-    // Считаем статистику
-    const total = allReviews.length;
+    let total = allReviews.length;
     let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let sum = 0;
 
-    allReviews.forEach(r => {
-        if (stats[r.rating] !== undefined) stats[r.rating]++;
-        sum += r.rating;
-    });
-
+    allReviews.forEach(r => { if (stats[r.rating] !== undefined) stats[r.rating]++; sum += r.rating; });
     const average = total > 0 ? (sum / total).toFixed(1) : 0;
 
-    res.json({ 
-        reviews: allReviews.reverse().slice(0, 10), // 10 последних для показа
-        stats: stats, 
-        average: average, 
-        total: total 
-    });
+    res.json({ reviews: allReviews.reverse().slice(0, 10), stats: stats, average: average, total: total });
 });
 
 app.post('/api/reviews/add', (req, res) => {
@@ -200,7 +193,7 @@ app.post('/api/register', async (req, res) => {
     const { login, password, gameNick } = req.body;
     if (db.users.find(u => u.name === login)) return res.status(400).json({ message: 'Логин занят!' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick, avatar: null, pushSub: null };
+    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick: gameNick, avatar: null, pushSub: null };
     db.users.push(newUser); saveDB();
     req.login(newUser, (err) => { if (err) return res.status(500).json({ message: 'Ошибка' }); res.json({ message: 'Успешно!' }); });
 });
@@ -229,10 +222,17 @@ app.post('/api/order', (req, res) => {
     res.json({ message: `Заказ создан!` });
 });
 
+// ВХОД/ВЫХОД
 app.get('/auth/yandex', passport.authenticate('yandex'));
-app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/login' }), (req, res) => res.redirect('/'));
-app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); res.redirect('/login'); }); });
+app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
+app.get('/logout', (req, res, next) => { 
+    req.logout((err) => { 
+        if (err) return next(err); 
+        res.redirect('/'); // ИСПРАВЛЕНО: теперь кидает на главную, а не на /login
+    }); 
+});
 
+// АДМИНКА
 const ADMIN_PASSWORD = 'admin';
 app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.post('/api/admin/login', (req, res) => { if (req.body.password === ADMIN_PASSWORD) { req.session.isAdmin = true; res.json({ success: true }); } else { res.status(401).json({ message: 'Неверный пароль' }); } });
@@ -241,7 +241,10 @@ app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.j
 
 app.get('/api/admin/data', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    const safeUsers = db.users.map(u => ({ id: u.id, name: u.name, gameNick: u.gameNick }));
+    const safeUsers = db.users.map(u => ({ 
+        id: u.id, 
+        name: u.gameNick || 'Игрок (нет ника)' 
+    }));
     res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, reviews: db.reviews });
 });
 
@@ -273,15 +276,4 @@ app.post('/api/admin/reply', (req, res) => {
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    if (process.env.NETRUN) {
-        console.log(`\n🚀 СЕРВЕР УСПЕШНО ЗАПУЩЕН НА NETRUN! Порт: ${PORT}\n`);
-    } else {
-        console.log('\n=============================================');
-        console.log('🚀 ЛОКАЛЬНЫЙ СЕРВЕР УСПЕШНО ЗАПУЩЕН!');
-        console.log(`🛒 Магазин:  http://localhost:${PORT}`);
-        console.log(`🚨 Админка:  http://localhost:${PORT}/admin`);
-        console.log('=============================================\n');
-    }
-});
+app.listen(PORT, () => console.log(`Сервер запущен!`));
