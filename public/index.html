@@ -10,6 +10,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
         body { background-color: var(--bg-dark); background-image: radial-gradient(circle at 50% 0%, #15305a 0%, #061225 70%); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
         
+        /* Убираем стрелочки у input number */
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
@@ -148,12 +149,46 @@
 
         .chat-link { color: #00d2ff; text-decoration: underline; cursor: pointer; font-weight: bold; }
 
+        /* --- ОФОРМЛЕНИЕ ДЛЯ ТЕЛЕФОНОВ --- */
         @media (max-width: 900px) {
             .main-container { grid-template-columns: 1fr; }
             .news-column { position: static; max-height: none; order: -1; margin-bottom: 20px; }
             .header-left { gap: 10px; }
             .logo { font-size: 20px; }
             .user-name { display: none; }
+            .schedule-banner, .tg-banner, .server-banner, .seller-nick-banner { font-size: 12px; padding: 10px; }
+        }
+
+        @media (max-width: 600px) {
+            header { padding: 10px 15px; }
+            .container { padding: 15px 10px; }
+            .server-banner { font-size: 14px; }
+            
+            /* ТОВАРЫ В 2 РЯДА */
+            .items-grid { 
+                grid-template-columns: repeat(2, 1fr); /* Строго 2 колонки */
+                gap: 10px; 
+            }
+            
+            /* УМЕНЬШАЕМ КАРТОЧКИ */
+            .card { padding: 15px 10px; border-radius: 10px; }
+            .card-img { width: 60px; height: 60px; margin-bottom: 8px; }
+            .card h3 { font-size: 13px; margin-bottom: 5px; line-height: 1.2;}
+            
+            /* КОМПАКТНЫЙ БЛОК ЦЕНЫ И КОЛИЧЕСТВА */
+            .price-row { padding: 5px; margin-bottom: 10px; flex-direction: column; gap: 5px; background: transparent;}
+            .quantity-control { width: 100%; justify-content: space-between; }
+            .quantity-control button { width: 25px; height: 25px; font-size: 16px; }
+            .quantity-control input { width: 30px; font-size: 14px; }
+            .card .price { font-size: 14px; }
+            .card .price span { font-size: 10px; }
+            
+            .buy-btn { padding: 8px; font-size: 12px; border-radius: 6px; }
+            
+            /* ОТЗЫВЫ НА ТЕЛЕФОНЕ */
+            .rating-summary { flex-direction: column; gap: 20px; text-align: center; }
+            .rating-bars { width: 100%; }
+            .reviews-section { padding: 15px; }
         }
     </style>
 </head>
