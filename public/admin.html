@@ -41,11 +41,12 @@
         .btn-complete { background: var(--green); width: auto; padding: 8px 15px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;}
         
         .news-admin-item { background: #000; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 2px solid var(--blue); }
-        .news-admin-date { font-size: 11px; color: #888; margin-bottom: 5px; }
+        .news-admin-item.pinned { border-left-color: #ffb703; background: #111a11; }
+        .news-admin-date { font-size: 11px; color: #888; margin-bottom: 5px; display: flex; justify-content: space-between;}
         .news-admin-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
         .news-admin-content { font-size: 12px; color: #aaa; margin-bottom: 10px; white-space: pre-wrap; max-height: 60px; overflow-y: auto;}
-        .news-btns { display: flex; gap: 10px; }
-        .news-btns button { width: auto; padding: 5px 10px; font-size: 12px;}
+        .news-btns { display: flex; gap: 5px; flex-wrap: wrap; }
+        .news-btns button { width: auto; padding: 5px 10px; font-size: 11px;}
 
         .chat-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
         .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: auto;}
@@ -215,16 +216,22 @@
             if (!adminData.news) return;
             adminData.news.forEach(n => {
                 list.innerHTML += `
-                <div class="news-admin-item">
-                    <div class="news-admin-date">${n.date} ${n.edited ? `(Ред. ${n.edited})` : ''}</div>
+                <div class="news-admin-item ${n.pinned ? 'pinned' : ''}">
+                    <div class="news-admin-date">${n.date} ${n.edited ? `(Ред. ${n.edited})` : ''} ${n.pinned ? '📌' : ''}</div>
                     <div class="news-admin-title">${n.title}</div>
                     <div class="news-admin-content">${n.content}</div>
                     <div class="news-btns">
-                        <button onclick="editNews('${n.id}')" style="background: var(--blue); color: #000;">Редактировать</button>
+                        <button onclick="togglePin('${n.id}')" style="background: #ffb703; color: #000;">${n.pinned ? 'Открепить' : 'Закрепить'}</button>
+                        <button onclick="editNews('${n.id}')" style="background: var(--blue); color: #000;">Ред.</button>
                         <button onclick="deleteNews('${n.id}')" style="background: #ff4d4d;">Удалить</button>
                     </div>
                 </div>`;
             });
+        }
+
+        async function togglePin(id) {
+            await fetch('/api/admin/news/pin', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
+            loadData();
         }
 
         async function saveNews() {
