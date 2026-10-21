@@ -15,12 +15,10 @@ app.use(passport.session());
 app.use(express.static('public'));
 app.use(express.json({ limit: '50mb' }));
 
-// --- КЛЮЧИ ---
 const publicVapidKey = 'ТВОЙ_PUBLIC_KEY'; 
 const privateVapidKey = 'ТВОЙ_PRIVATE_KEY'; 
 try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, privateVapidKey); } catch(e) {}
 
-// --- БАЗА (С ПОДДЕРЖКОЙ NETRUN) ---
 const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
 
 let db = { users: [], inventory: { damass: 10, copper: 5, cobble: 10, vip: 3 }, orders: [], messages: [], reviews: [] };
@@ -45,11 +43,8 @@ if (fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
 }
 
-function saveDB() { 
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
-}
+function saveDB() { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
 
-// --- ЯНДЕКС (ОБНОВЛЕНА ССЫЛКА НА NETRUN) ---
 passport.use(new YandexStrategy({
     clientID: 'c0f552be2f44400b80e933f514c19d0f',
     clientSecret: 'dca12e0b6afe4cef90c4adad79dad527',
@@ -64,7 +59,6 @@ passport.use(new YandexStrategy({
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => { const user = db.users.find(u => u.id === id); done(null, user); });
 
-// --- МАРШРУТЫ ---
 app.get('/api/user', (req, res) => {
     if (req.user) res.json({ name: req.user.name, gameNick: req.user.gameNick, avatar: req.user.avatar });
     else res.status(401).json({ error: 'Not logged in' });
@@ -98,12 +92,31 @@ app.get('/api/orders', (req, res) => {
     res.json(db.orders.filter(o => o.userId === req.user.id));
 });
 
+// Обновленный API отзывов (с расчетом статистики)
 app.get('/api/reviews/all', (req, res) => {
-    const publicReviews = db.reviews.map(r => {
+    const allReviews = db.reviews.map(r => {
         const user = db.users.find(u => u.id === r.userId);
         return { id: r.id, userName: user ? user.name : 'Аноним', rating: r.rating, text: r.text, itemId: r.itemId, date: r.date };
-    }).reverse().slice(0, 10);
-    res.json(publicReviews);
+    });
+
+    // Считаем статистику
+    const total = allReviews.length;
+    let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let sum = 0;
+
+    allReviews.forEach(r => {
+        if (stats[r.rating] !== undefined) stats[r.rating]++;
+        sum += r.rating;
+    });
+
+    const average = total > 0 ? (sum / total).toFixed(1) : 0;
+
+    res.json({ 
+        reviews: allReviews.reverse().slice(0, 10), // 10 последних для показа
+        stats: stats, 
+        average: average, 
+        total: total 
+    });
 });
 
 app.post('/api/reviews/add', (req, res) => {
@@ -220,7 +233,6 @@ app.get('/auth/yandex', passport.authenticate('yandex'));
 app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/login' }), (req, res) => res.redirect('/'));
 app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); res.redirect('/login'); }); });
 
-// --- АДМИНКА ---
 const ADMIN_PASSWORD = 'admin';
 app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.post('/api/admin/login', (req, res) => { if (req.body.password === ADMIN_PASSWORD) { req.session.isAdmin = true; res.json({ success: true }); } else { res.status(401).json({ message: 'Неверный пароль' }); } });
@@ -260,7 +272,6 @@ app.post('/api/admin/reply', (req, res) => {
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
-// --- ЗАПУСК СЕРВЕРА ---
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
