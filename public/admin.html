@@ -15,9 +15,7 @@
             -webkit-appearance: none;
             margin: 0;
         }
-        input[type="number"] {
-            -moz-appearance: textfield;
-        }
+        input[type="number"] { -moz-appearance: textfield; }
 
         .login-box { max-width: 400px; margin: 100px auto; background: var(--panel); padding: 30px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
         .login-box h2 { color: var(--accent); margin-bottom: 20px; }
@@ -144,7 +142,6 @@
     </div>
 
     <script>
-        // Словарь для перевода ID в красивые названия
         const itemDatabase = {
             'Дамасс': { 'damass': 'Дамасский слиток' },
             'Сталь': { 'steel': 'Стальной слиток' },
@@ -163,12 +160,11 @@
             'Интерьер': { 'table': 'Стол', 'chair': 'Стул' }
         };
 
-        // Функция для получения названия по ID
         function getItemName(id) {
             for (const category in itemDatabase) {
                 if (itemDatabase[category][id]) return itemDatabase[category][id];
             }
-            return id; // Если не нашли, возвращаем сам ID
+            return id;
         }
 
         let adminData = null, currentChatUser = null, currentChatType = 'seller', isUpdating = false;
@@ -206,6 +202,7 @@
                     let val = adminData.inventory[id] !== undefined ? adminData.inventory[id] : 0;
                     let price = adminData.prices[id] !== undefined ? adminData.prices[id] : 0;
                     
+                    // ДОБАВЛЕНЫ КНОПКИ + И - ДЛЯ ЦЕНЫ
                     categoryHtml += `
                         <div class="inv-card">
                             <div class="inv-card-name">${name}</div>
@@ -220,7 +217,9 @@
                             <div class="inv-control-row">
                                 <span>Цена:</span>
                                 <div class="inv-controls">
+                                    <button onclick="changePrice('${id}', -1)">-</button>
                                     <input type="number" class="price-input" id="price-${id}" value="${price}" min="0" placeholder="0">
+                                    <button onclick="changePrice('${id}', 1)">+</button>
                                 </div>
                             </div>
                         </div>`;
@@ -232,6 +231,14 @@
 
         function changeInv(id, change) {
             const input = document.getElementById(`inv-${id}`);
+            let val = parseInt(input.value) || 0;
+            val += change;
+            if (val < 0) val = 0;
+            input.value = val;
+        }
+
+        function changePrice(id, change) {
+            const input = document.getElementById(`price-${id}`);
             let val = parseInt(input.value) || 0;
             val += change;
             if (val < 0) val = 0;
@@ -317,19 +324,19 @@
                 const user = adminData.users.find(u => u.id === o.userId);
                 const displayNick = user ? user.name : 'Неизвестный';
                 const isPending = o.status === 'pending';
-                const productName = getItemName(o.itemId); // ИСПОЛЬЗУЕМ КРАСИВОЕ НАЗВАНИЕ
+                const productName = getItemName(o.itemId); 
                 
                 let btnHtml = isPending ? `<button class="btn-complete" onclick="completeOrder('${o.id}', this)">Выдать</button>` : '';
                 
-                // РАЗДЕЛЯЕМ СТАТУСЫ
                 let statusHtml = '';
                 if (o.status === 'pending') statusHtml = `<span style="color:#ffb703">Ожидает выдачи</span>`;
                 else if (o.status === 'delivered') statusHtml = `<span style="color:#00d2ff">Выдан</span>`;
                 else if (o.status === 'completed') statusHtml = `<span style="color:#00ff88">Завершен</span>`;
-                else if (o.status === 'dispute') statusHtml = `<span style="color:#ff4d4d">Спор (Товар не получен)</span>`;
-                else if (o.status === 'cancelled') statusHtml = `<span style="color:#888">Отменен</span>`;
+                else if (o.status === 'dispute') statusHtml = `<span style="color:#ff4d4d">Спор (Не получен)</span>`;
+                else if (o.status === 'cancelled_by_user') statusHtml = `<span style="color:#888">Отменен игроком (по желанию)</span>`;
+                else if (o.status === 'cancelled_by_dispute') statusHtml = `<span style="color:#ff4d4d">Отменен (Спор не решен)</span>`;
 
-                html += `<div class="order-item" style="${isPending ? '' : 'opacity: 0.8;'} ${o.status === 'dispute' ? 'border-left-color: #ff4d4d;' : ''}">
+                html += `<div class="order-item" style="${isPending ? '' : 'opacity: 0.8;'} ${o.status === 'dispute' || o.status === 'cancelled_by_dispute' ? 'border-left-color: #ff4d4d;' : ''}">
                     <div class="order-info"><b>${displayNick}</b> купил <b>${productName}</b> (x${o.qty})<br>Ник: <b style="color: #fff;">${o.buyerNick}</b><br>${statusHtml}</div>${btnHtml}</div>`;
             });
             list.innerHTML = html;
