@@ -1,356 +1,340 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel | Cube Shop</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        :root { --bg: #111; --panel: #1e1e1e; --text: #eee; --accent: #ff4d4d; --border: #333; --green: #28a745; --blue: #00d2ff;}
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
-        body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
-        
-        .login-box { max-width: 400px; margin: 100px auto; background: var(--panel); padding: 30px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
-        .login-box h2 { color: var(--accent); margin-bottom: 20px; }
-        
-        input, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 5px; margin-bottom: 15px; outline: none; font-family: inherit;}
-        input:focus, textarea:focus { border-color: var(--accent); }
-        button { background: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s;}
-        button:hover { opacity: 0.9; }
-        
-        #admin-panel { display: none; max-width: 1400px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
-        .header h1 { color: var(--accent); font-size: 24px; }
-        .logout-btn { background: transparent; border: 1px solid var(--text); width: auto; padding: 8px 15px; }
+const express = require('express');
+const session = require('express-session');
+const passport = require('passport');
+const YandexStrategy = require('passport-yandex').Strategy;
+const path = require('path');
+const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const webpush = require('web-push');
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
-        .panel h3 { margin-bottom: 15px; color: #aaa; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+const app = express();
 
-        .inv-category { margin-bottom: 20px; }
-        .inv-category-title { color: var(--blue); font-weight: bold; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px;}
-        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .inv-card { background: #000; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #222;}
-        .inv-card-name { font-size: 12px; margin-bottom: 8px; color: #ccc; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;}
-        
-        .inv-control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; gap: 5px;}
-        .inv-control-row span { font-size: 10px; color: #888; width: 25px; text-align: left;}
-        
-        .inv-controls { display: flex; justify-content: center; align-items: center; gap: 5px; flex-grow: 1;}
-        .inv-controls button { width: 25px; padding: 5px 0; background: #222; color: white; border: 1px solid #444; font-size: 14px;}
-        .inv-controls input { width: 40px; padding: 5px; margin-bottom: 0; text-align: center; border: 1px solid #444;}
-        .inv-controls input.price-input { color: #ffb703; border-color: #553300;}
+app.use(session({ secret: 'cube_shop_secret', resave: false, saveUninitialized: true }));
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(express.static('public'));
+app.use(express.json({ limit: '50mb' }));
 
-        .order-item { background: #000; padding: 15px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center;}
-        .order-info { flex-grow: 1; }
-        .btn-complete { background: var(--green); width: auto; padding: 8px 15px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;}
-        
-        .news-admin-item { background: #000; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 2px solid var(--blue); }
-        .news-admin-item.pinned { border-left-color: #ffb703; background: #111a11; }
-        .news-admin-date { font-size: 11px; color: #888; margin-bottom: 5px; display: flex; justify-content: space-between;}
-        .news-admin-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
-        .news-admin-content { font-size: 12px; color: #aaa; margin-bottom: 10px; white-space: pre-wrap; max-height: 60px; overflow-y: auto;}
-        .news-btns { display: flex; gap: 5px; flex-wrap: wrap; }
-        .news-btns button { width: auto; padding: 5px 10px; font-size: 11px;}
+// --- КЛЮЧИ ---
+const publicVapidKey = 'ТВОЙ_PUBLIC_KEY'; 
+const privateVapidKey = 'ТВОЙ_PRIVATE_KEY'; 
+try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, privateVapidKey); } catch(e) {}
 
-        .chat-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
-        .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: auto;}
-        .chat-tab.active { background: var(--blue); color: #000; border-color: var(--blue); font-weight: bold;}
-        .chat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 15px; height: 400px; }
-        .user-list { background: #000; border-radius: 5px; overflow-y: auto; border: 1px solid var(--border); }
-        .user-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
-        .user-item:hover, .user-item.active { background: #222; color: var(--blue); }
-        .chat-area { display: flex; flex-direction: column; background: #000; border-radius: 5px; border: 1px solid var(--border); padding: 15px; }
-        .messages { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .msg { padding: 10px; border-radius: 5px; max-width: 80%; font-size: 14px; }
-        .msg.user { background: #333; align-self: flex-start; }
-        .msg.admin { background: var(--blue); color: #000; align-self: flex-end; }
-        
-        .pass-wrapper { position: relative; margin-bottom: 15px; }
-        .pass-wrapper input { margin-bottom: 0; padding-right: 40px; }
-        .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 20px; }
-    </style>
-</head>
-<body>
-    <div class="login-box" id="login-box">
-        <h2>Вход в Админку</h2>
-        <div class="pass-wrapper">
-            <input type="password" id="pass-input" placeholder="Пароль (admin)" onkeypress="if(event.key === 'Enter') login()">
-            <span onclick="togglePassword()" class="eye-icon" id="eye-icon">👁️</span>
-        </div>
-        <button onclick="login()">Войти</button>
-    </div>
+// --- БАЗА (С ПОДДЕРЖКОЙ NETRUN) ---
+const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
 
-    <div id="admin-panel">
-        <div class="header">
-            <h1>🚨 Админ Панель</h1>
-            <button class="logout-btn" onclick="logout()">Выйти</button>
-        </div>
+let db = { 
+    users: [], 
+    inventory: { damass: 10, copper: 5, cobble: 10 }, 
+    prices: { damass: 30, copper: 12, cobble: 15, sword: 50, axe: 45, pickaxe: 40, fishing_rod: 20 }, 
+    orders: [], 
+    messages: [], 
+    reviews: [], 
+    news: [] 
+};
 
-        <div class="grid">
-            <div class="panel">
-                <h3>Товары (Кол-во и Цена)</h3>
-                <div id="inventory-list" style="max-height: 600px; overflow-y: auto; padding-right: 10px;"></div>
-                <button onclick="saveInventory()" style="margin-top: 15px;">Сохранить всё</button>
-            </div>
+if (process.env.NETRUN) {
+    const dataDir = '/data';
+    if (!fs.existsSync(dataDir)) {
+        try { fs.mkdirSync(dataDir); } catch(e) { console.log("Не удалось создать папку /data"); }
+    }
+}
 
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div class="panel">
-                    <h3 id="news-form-title">Добавить новость</h3>
-                    <input type="hidden" id="edit-news-id">
-                    <input type="text" id="news-title" placeholder="Заголовок">
-                    <textarea id="news-content" rows="3" placeholder="Текст новости..."></textarea>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="saveNews()" style="background: var(--blue); color: #000;" id="news-submit-btn">Опубликовать</button>
-                        <button onclick="cancelEdit()" id="news-cancel-btn" style="background: #555; display: none;">Отмена</button>
-                    </div>
-                    
-                    <div id="news-list" style="margin-top: 15px; max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
-                </div>
+if (fs.existsSync(DB_FILE)) { 
+    try { 
+        db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); 
+        if (!db.users) db.users = [];
+        if (!db.orders) db.orders = [];
+        if (!db.messages) db.messages = [];
+        if (!db.reviews) db.reviews = [];
+        if (!db.news) db.news = [];
+        if (!db.inventory) db.inventory = { damass: 10, copper: 5, cobble: 10 };
+        if (!db.prices) db.prices = { damass: 30, copper: 12, cobble: 15, sword: 50, axe: 45, pickaxe: 40, fishing_rod: 20 };
+    } catch (e) {} 
+} else { 
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
+}
 
-                <div class="panel">
-                    <h3>Заказы</h3>
-                    <div id="orders-list" style="max-height: 300px; overflow-y: auto;"></div>
-                </div>
-            </div>
-        </div>
+function saveDB() { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
 
-        <div class="panel" style="margin-top: 20px;">
-            <h3>Чаты</h3>
-            <div class="chat-tabs">
-                <button class="chat-tab active" id="tab-seller" onclick="switchChatTab('seller')">📦 Выдача заказов</button>
-                <button class="chat-tab" id="tab-support" onclick="switchChatTab('support')">🆘 Тех. Поддержка</button>
-            </div>
-            <div class="chat-layout">
-                <div class="user-list" id="chat-users"></div>
-                <div class="chat-area">
-                    <div class="messages" id="chat-messages"><div style="color: #666; text-align: center; margin-top: 50px;">Выберите пользователя</div></div>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="admin-reply-input" placeholder="Ответ..." onkeypress="if(event.key === 'Enter') sendReply()">
-                        <button onclick="sendReply()" style="width: 100px;">➤</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+// --- ЯНДЕКС ---
+passport.use(new YandexStrategy({
+    clientID: 'c0f552be2f44400b80e933f514c19d0f',
+    clientSecret: 'dca12e0b6afe4cef90c4adad79dad527',
+    callbackURL: "https://cube-shop.de1.netrun.io/auth/yandex/callback"
+  },
+  function(accessToken, refreshToken, profile, done) {
+    let user = db.users.find(u => u.yandexId === profile.id);
+    if (!user) { user = { id: Date.now().toString(), yandexId: profile.id, name: profile.displayName, gameNick: null, avatar: null, pushSub: null }; db.users.push(user); saveDB(); }
+    return done(null, user);
+  }
+));
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser((id, done) => { const user = db.users.find(u => u.id === id); done(null, user); });
 
-    <script>
-        const itemDatabase = {
-            'Дамасс': { 'damass': 'Дамасский слиток' },
-            'Сталь': { 'steel': 'Стальной слиток' },
-            'Железо': { 'iron': 'Железный слиток' },
-            'Золото': { 'gold': 'Золотой слиток' },
-            'Медь': { 'copper': 'Медный слиток' },
-            'Бронза': { 'bronze': 'Бронзовый слиток' },
-            'Броня (Нашлемник)': { 'helmet_damass': 'Дамасский шлем', 'helmet_copper': 'Медный шлем' },
-            'Броня (Нагрудник)': { 'chestplate_damass': 'Дамасский нагрудник', 'copper': 'Медный нагрудник' },
-            'Броня (Штаны)': { 'leggings_damass': 'Дамасские штаны' },
-            'Броня (Сапоги)': { 'boots_damass': 'Дамасские сапоги' },
-            'Инструменты': { 'sword': 'Железный меч', 'axe': 'Железный топор', 'pickaxe': 'Железная кирка', 'shovel': 'Лопата', 'spear': 'Копьё', 'mace': 'Булава', 'fishing_rod': 'Удочка' },
-            'Еда': { 'apple': 'Яблоко', 'bread': 'Хлеб' },
-            'Взрывчатка': { 'tnt': 'Динамит' },
-            'Сырьё': { 'cobble': 'Стак Булыжника', 'wood': 'Древесина' },
-            'Интерьер': { 'table': 'Стол', 'chair': 'Стул' }
-        };
+// --- МАРШРУТЫ ПОЛЬЗОВАТЕЛЯ ---
+app.get('/api/user', (req, res) => {
+    if (req.user) res.json({ name: req.user.name, gameNick: req.user.gameNick, avatar: req.user.avatar });
+    else res.status(401).json({ error: 'Not logged in' });
+});
 
-        let adminData = null, currentChatUser = null, currentChatType = 'seller', isUpdating = false;
+app.post('/api/profile/update', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { gameNick, avatar } = req.body;
+    const user = db.users.find(u => u.id === req.user.id);
+    if (gameNick !== undefined) user.gameNick = gameNick;
+    if (avatar !== undefined) user.avatar = avatar;
+    saveDB();
+    res.json({ message: 'Профиль обновлен' });
+});
 
-        function togglePassword() { const i = document.getElementById('pass-input'); i.type = i.type === 'password' ? 'text' : 'password'; }
+app.post('/api/profile/password', async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { oldPass, newPass } = req.body;
+    const user = db.users.find(u => u.id === req.user.id);
+    if (user.password) {
+        const isMatch = await bcrypt.compare(oldPass, user.password);
+        if (!isMatch) return res.status(400).json({ message: 'Старый пароль неверный' });
+    }
+    user.password = await bcrypt.hash(newPass, 10);
+    saveDB();
+    res.json({ message: 'Пароль изменен' });
+});
 
-        window.onload = async () => {
-            const res = await fetch('/api/admin/check'); const data = await res.json();
-            if (data.isAdmin) { document.getElementById('login-box').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; loadData(); }
-        };
+app.get('/api/orders', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    res.json(db.orders.filter(o => o.userId === req.user.id));
+});
 
-        async function login() {
-            const res = await fetch('/api/admin/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ password: document.getElementById('pass-input').value }) });
-            if (res.ok) { document.getElementById('login-box').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; loadData(); } else { alert('Неверный пароль!'); }
-        }
-        async function logout() { await fetch('/api/admin/logout', { method: 'POST' }); window.location.reload(); }
+// --- ОТЗЫВЫ ---
+app.get('/api/reviews/all', (req, res) => {
+    const allReviews = db.reviews.map(r => {
+        const user = db.users.find(u => u.id === r.userId);
+        return { id: r.id, userName: user ? (user.gameNick || 'Игрок') : 'Аноним', rating: r.rating, text: r.text, itemId: r.itemId, date: r.date };
+    });
+    let total = allReviews.length;
+    let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let sum = 0;
+    allReviews.forEach(r => { if (stats[r.rating] !== undefined) stats[r.rating]++; sum += r.rating; });
+    const average = total > 0 ? (sum / total).toFixed(1) : 0;
+    res.json({ reviews: allReviews.reverse().slice(0, 10), stats: stats, average: average, total: total });
+});
 
-        async function loadData() {
-            if (isUpdating) return; isUpdating = true;
-            try {
-                const res = await fetch('/api/admin/data');
-                if (res.ok) { 
-                    adminData = await res.json(); 
-                    if (!adminData.prices) adminData.prices = {};
-                    renderInventory(); renderOrders(); renderNews(); renderChatUsers(); if (currentChatUser) openChat(currentChatUser); 
-                }
-            } catch (e) {} finally { isUpdating = false; setTimeout(loadData, 5000); }
-        }
+app.post('/api/reviews/add', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { orderId, rating, text } = req.body;
+    const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
+    if (!order) return res.status(404).json({ message: 'Заказ не найден' });
+    db.reviews.push({ id: Date.now().toString(), userId: req.user.id, itemId: order.itemId, rating, text, date: new Date().toLocaleDateString() });
+    order.reviewed = true;
+    saveDB();
+    res.json({ success: true });
+});
 
-        function renderInventory() {
-            const list = document.getElementById('inventory-list'); list.innerHTML = '';
-            for (const [category, items] of Object.entries(itemDatabase)) {
-                let categoryHtml = `<div class="inv-category"><div class="inv-category-title">${category}</div><div class="inv-grid">`;
-                for (const [id, name] of Object.entries(items)) {
-                    let val = adminData.inventory[id] !== undefined ? adminData.inventory[id] : 0;
-                    let price = adminData.prices[id] !== undefined ? adminData.prices[id] : 0;
-                    
-                    categoryHtml += `
-                        <div class="inv-card">
-                            <div class="inv-card-name">${name}</div>
-                            <div class="inv-control-row">
-                                <span>Кол-во:</span>
-                                <div class="inv-controls">
-                                    <button onclick="changeInv('${id}', -1)">-</button>
-                                    <input type="number" id="inv-${id}" value="${val}" min="0">
-                                    <button onclick="changeInv('${id}', 1)">+</button>
-                                </div>
-                            </div>
-                            <div class="inv-control-row">
-                                <span>Цена:</span>
-                                <div class="inv-controls">
-                                    <input type="number" class="price-input" id="price-${id}" value="${price}" min="0" placeholder="0">
-                                </div>
-                            </div>
-                        </div>`;
-                }
-                categoryHtml += `</div></div>`;
-                list.innerHTML += categoryHtml;
-            }
-        }
+// --- НОВОСТИ ---
+app.get('/api/news', (req, res) => {
+    const sortedNews = [...db.news].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return 0;
+    });
+    res.json(sortedNews);
+});
 
-        function changeInv(id, change) {
-            const input = document.getElementById(`inv-${id}`);
-            let val = parseInt(input.value) || 0;
-            val += change;
-            if (val < 0) val = 0;
-            input.value = val;
-        }
+app.post('/api/admin/news', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { title, content } = req.body;
+    const now = new Date();
+    const mskOffset = 3 * 60; 
+    const localOffset = now.getTimezoneOffset();
+    const mskTime = new Date(now.getTime() + (mskOffset + localOffset) * 60000);
+    const dateStr = mskTime.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    db.news.unshift({ id: Date.now().toString(), title, content, date: dateStr, edited: null, pinned: false });
+    saveDB();
+    res.json({ success: true });
+});
 
-        async function saveInventory() {
-            let newInv = {};
-            let newPrices = {};
-            
-            document.querySelectorAll('#inventory-list input[id^="inv-"]').forEach(input => {
-                const id = input.id.replace('inv-', '');
-                newInv[id] = parseInt(input.value) || 0;
-            });
+app.post('/api/admin/news/edit', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { id, title, content } = req.body;
+    const newsItem = db.news.find(n => n.id === id);
+    if (newsItem) {
+        newsItem.title = title;
+        newsItem.content = content;
+        const now = new Date();
+        const mskOffset = 3 * 60; 
+        const localOffset = now.getTimezoneOffset();
+        const mskTime = new Date(now.getTime() + (mskOffset + localOffset) * 60000);
+        newsItem.edited = mskTime.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        saveDB();
+        res.json({ success: true });
+    } else { res.status(404).json({ message: 'Новость не найдена' }); }
+});
 
-            document.querySelectorAll('#inventory-list input[id^="price-"]').forEach(input => {
-                const id = input.id.replace('price-', '');
-                newPrices[id] = parseInt(input.value) || 0;
-            });
+app.post('/api/admin/news/pin', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { id } = req.body;
+    const newsItem = db.news.find(n => n.id === id);
+    if (newsItem) {
+        if (!newsItem.pinned) {
+            db.news.forEach(n => n.pinned = false);
+            newsItem.pinned = true;
+        } else { newsItem.pinned = false; }
+        saveDB();
+        res.json({ success: true });
+    } else { res.status(404).json({ message: 'Новость не найдена' }); }
+});
 
-            const res = await fetch('/api/admin/inventory', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ inventory: newInv, prices: newPrices }) 
-            });
-            if(res.ok) alert('Товары и цены сохранены!');
-        }
+app.post('/api/admin/news/delete', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    db.news = db.news.filter(n => n.id !== req.body.id);
+    saveDB();
+    res.json({ success: true });
+});
 
-        function renderNews() {
-            const list = document.getElementById('news-list'); list.innerHTML = '';
-            if (!adminData.news) return;
-            adminData.news.forEach(n => {
-                list.innerHTML += `
-                <div class="news-admin-item ${n.pinned ? 'pinned' : ''}">
-                    <div class="news-admin-date">${n.date} ${n.edited ? `(Ред. ${n.edited})` : ''} ${n.pinned ? '📌' : ''}</div>
-                    <div class="news-admin-title">${n.title}</div>
-                    <div class="news-admin-content">${n.content}</div>
-                    <div class="news-btns">
-                        <button onclick="togglePin('${n.id}')" style="background: #ffb703; color: #000;">${n.pinned ? 'Открепить' : 'Закрепить'}</button>
-                        <button onclick="editNews('${n.id}')" style="background: var(--blue); color: #000;">Ред.</button>
-                        <button onclick="deleteNews('${n.id}')" style="background: #ff4d4d;">Удалить</button>
-                    </div>
-                </div>`;
-            });
-        }
+// --- ЗАКАЗЫ И ЧАТЫ ---
+app.post('/api/order/confirm-receipt', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { orderId } = req.body;
+    const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
+    if (order && (order.status === 'delivered' || order.status === 'dispute')) { order.status = 'completed'; saveDB(); res.json({ success: true }); } 
+    else { res.status(400).json({ message: 'Ошибка' }); }
+});
 
-        async function togglePin(id) { await fetch('/api/admin/news/pin', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadData(); }
-        async function saveNews() {
-            const id = document.getElementById('edit-news-id').value;
-            const title = document.getElementById('news-title').value;
-            const content = document.getElementById('news-content').value;
-            if (!title || !content) return alert('Заполните заголовок и текст!');
-            const url = id ? '/api/admin/news/edit' : '/api/admin/news';
-            const body = id ? { id, title, content } : { title, content };
-            await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-            cancelEdit(); loadData();
-        }
-        function editNews(id) {
-            const newsItem = adminData.news.find(n => n.id === id); if (!newsItem) return;
-            document.getElementById('edit-news-id').value = newsItem.id;
-            document.getElementById('news-title').value = newsItem.title;
-            document.getElementById('news-content').value = newsItem.content;
-            document.getElementById('news-form-title').innerText = 'Редактировать новость';
-            document.getElementById('news-submit-btn').innerText = 'Сохранить изменения';
-            document.getElementById('news-cancel-btn').style.display = 'block';
-            window.scrollTo(0, 0);
-        }
-        function cancelEdit() {
-            document.getElementById('edit-news-id').value = ''; document.getElementById('news-title').value = '';
-            document.getElementById('news-content').value = ''; document.getElementById('news-form-title').innerText = 'Добавить новость';
-            document.getElementById('news-submit-btn').innerText = 'Опубликовать'; document.getElementById('news-cancel-btn').style.display = 'none';
-        }
-        async function deleteNews(id) { if(!confirm('Удалить новость?')) return; await fetch('/api/admin/news/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadData(); }
+app.post('/api/order/dispute', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { orderId } = req.body;
+    const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
+    if (order && order.status === 'delivered') { order.status = 'dispute'; saveDB(); res.json({ success: true }); } 
+    else { res.status(400).json({ message: 'Ошибка' }); }
+});
 
-        function renderOrders() {
-            const list = document.getElementById('orders-list');
-            if (!adminData.orders || adminData.orders.length === 0) { list.innerHTML = '<div style="color:#666">Нет заказов</div>'; return; }
-            const recentOrders = [...adminData.orders].reverse().slice(0, 20);
-            let html = '';
-            recentOrders.forEach(o => {
-                const user = adminData.users.find(u => u.id === o.userId);
-                const displayNick = user ? user.name : 'Неизвестный';
-                const isPending = o.status === 'pending';
-                let btnHtml = isPending ? `<button class="btn-complete" onclick="completeOrder('${o.id}', this)">Выдать</button>` : '';
-                let statusHtml = isPending ? `<span style="color:#ffb703">Ожидает</span>` : (o.status === 'delivered' ? `<span style="color:#00d2ff">Выдан</span>` : (o.status === 'completed' ? `<span style="color:#00ff88">Завершен</span>` : `<span style="color:#ff4d4d">Спор/Отмена</span>`));
+app.post('/api/order/cancel', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { orderId } = req.body;
+    const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
+    if (order && (order.status === 'pending' || order.status === 'dispute' || order.status === 'delivered')) {
+        order.status = 'cancelled';
+        db.inventory[order.itemId] = (db.inventory[order.itemId] || 0) + order.qty;
+        const time = new Date().toLocaleString();
+        db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: 'seller', text: `🚨 ВНИМАНИЕ: Игрок отменил заказ #${order.id} (${order.itemId} x${order.qty}) в ${time}.`, time: time });
+        saveDB(); res.json({ success: true });
+    } else { res.status(400).json({ message: 'Нельзя отменить' }); }
+});
 
-                html += `<div class="order-item" style="${isPending ? '' : 'opacity: 0.8;'}">
-                    <div class="order-info"><b>${displayNick}</b> купил <b>${itemDatabase[o.itemId] ? (itemDatabase[o.itemId][o.itemId] || o.itemId) : o.itemId}</b> (x${o.qty})<br>Ник: <b style="color: #fff;">${o.buyerNick}</b><br>${statusHtml}</div>${btnHtml}</div>`;
-            });
-            list.innerHTML = html;
-        }
+app.get('/api/chat', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    res.json(db.messages.filter(m => m.userId === req.user.id));
+});
 
-        async function completeOrder(id, btn) {
-            if (!confirm('Выдали товар?')) return; btn.disabled = true; btn.innerText = '...';
-            const res = await fetch('/api/admin/complete-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId: id }) });
-            if (res.ok) await loadData(); else { alert('Ошибка'); btn.disabled = false; btn.innerText = 'Выдать'; }
-        }
+app.post('/api/chat', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { text, type } = req.body;
+    db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: type, text: text, time: new Date().toLocaleTimeString() });
+    saveDB();
+    setTimeout(() => {
+        let autoText = type === 'support' ? 'Ваше обращение принято в техподдержку. Пожалуйста, опишите проблему подробнее и ожидайте ответа администратора.' : 'Сообщение отправлено продавцу (KusKusik15). Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155.';
+        db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'admin', type: type, text: autoText, time: new Date().toLocaleTimeString() });
+        saveDB();
+    }, 1000);
+    res.json({ success: true });
+});
 
-        function switchChatTab(type) {
-            currentChatType = type;
-            document.getElementById('tab-seller').classList.remove('active'); document.getElementById('tab-support').classList.remove('active');
-            document.getElementById('tab-' + type).classList.add('active');
-            currentChatUser = null; document.getElementById('chat-messages').innerHTML = '<div style="color: #666; text-align: center; margin-top: 50px;">Выберите пользователя</div>';
-            renderChatUsers();
-        }
+app.get('/api/inventory', (req, res) => { 
+    res.json({ inventory: db.inventory, prices: db.prices || {} }); 
+});
 
-        function renderChatUsers() {
-            const list = document.getElementById('chat-users'); list.innerHTML = '';
-            const usersWithMsgs = [...new Set(adminData.messages.filter(m => m.type === currentChatType).map(m => m.userId))];
-            if (usersWithMsgs.length === 0) { list.innerHTML = '<div style="padding: 15px; color: #666;">Нет сообщений</div>'; return; }
+// --- АВТОРИЗАЦИЯ ---
+app.post('/api/register', async (req, res) => {
+    const { login, password, gameNick } = req.body;
+    if (db.users.find(u => u.name === login)) return res.status(400).json({ message: 'Логин занят!' });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick: gameNick, avatar: null, pushSub: null };
+    db.users.push(newUser); saveDB();
+    req.login(newUser, (err) => { if (err) return res.status(500).json({ message: 'Ошибка' }); res.json({ message: 'Успешно!' }); });
+});
 
-            usersWithMsgs.forEach(userId => {
-                const user = adminData.users.find(u => u.id === userId);
-                if (user) {
-                    const div = document.createElement('div');
-                    div.className = `user-item ${currentChatUser === userId ? 'active' : ''}`;
-                    div.innerText = user.name;
-                    div.onclick = () => openChat(userId);
-                    list.appendChild(div);
-                }
-            });
-        }
+app.post('/api/login', async (req, res) => {
+    const { login, password } = req.body;
+    const user = db.users.find(u => u.name === login);
+    if (!user || !user.password) return res.status(400).json({ message: 'Неверный логин или пароль' });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Неверный логин или пароль' });
+    req.login(user, (err) => { if (err) return res.status(500).json({ message: 'Ошибка' }); res.json({ message: 'Успешно!' }); });
+});
 
-        function openChat(userId) {
-            currentChatUser = userId; renderChatUsers();
-            const msgBox = document.getElementById('chat-messages'); msgBox.innerHTML = '';
-            const userMsgs = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType);
-            userMsgs.forEach(m => { msgBox.innerHTML += `<div class="msg ${m.sender}">${m.text}</div>`; });
-            msgBox.scrollTop = msgBox.scrollHeight;
-        }
+app.post('/api/order', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Вы не авторизованы!' });
+    const { itemId, qty, gameNick, currency } = req.body;
+    
+    if (!db.inventory[itemId] || db.inventory[itemId] < qty) return res.status(400).json({ message: 'Нет в наличии!' });
+    
+    const currentPrice = (db.prices && db.prices[itemId]) ? parseInt(db.prices[itemId]) : 0;
+    
+    db.inventory[itemId] -= qty;
+    db.orders.push({ 
+        id: Date.now().toString(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, 
+        price: currentPrice,
+        status: 'pending', reviewed: false, date: new Date().toLocaleString() 
+    });
+    saveDB();
+    res.json({ message: `Заказ создан!` });
+});
 
-        async function sendReply() {
-            if (!currentChatUser) return alert('Выберите пользователя!');
-            const input = document.getElementById('admin-reply-input'); const text = input.value.trim(); if (!text) return;
-            await fetch('/api/admin/reply', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentChatUser, text: text, type: currentChatType }) });
-            input.value = ''; loadData(); 
-        }
-    </script>
-</body>
-</html>
+app.get('/auth/yandex', passport.authenticate('yandex'));
+app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
+
+app.get('/logout', (req, res, next) => { 
+    req.logout((err) => { 
+        if (err) return next(err); 
+        res.redirect('/'); 
+    }); 
+});
+
+// --- АДМИНКА ---
+const ADMIN_PASSWORD = 'admin';
+app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
+app.post('/api/admin/login', (req, res) => { if (req.body.password === ADMIN_PASSWORD) { req.session.isAdmin = true; res.json({ success: true }); } else { res.status(401).json({ message: 'Неверный пароль' }); } });
+app.get('/api/admin/check', (req, res) => { res.json({ isAdmin: req.session.isAdmin === true }); });
+app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.json({ success: true }); });
+
+app.get('/api/admin/data', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const safeUsers = db.users.map(u => ({ id: u.id, name: u.gameNick || 'Игрок (нет ника)' }));
+    res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news });
+});
+
+app.post('/api/admin/inventory', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    
+    let newInv = {};
+    let newPrices = {};
+    
+    for (let key in req.body.inventory) { newInv[key] = parseInt(req.body.inventory[key]) || 0; }
+    for (let key in req.body.prices) { newPrices[key] = parseInt(req.body.prices[key]) || 0; }
+    
+    db.inventory = newInv;
+    db.prices = newPrices;
+    saveDB(); 
+    res.json({ success: true });
+});
+
+app.post('/api/admin/complete-order', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { orderId } = req.body;
+    const order = db.orders.find(o => o.id === orderId);
+    if (order) { order.status = 'delivered'; saveDB(); res.json({ success: true }); } 
+    else { res.status(404).json({ message: 'Заказ не найден' }); }
+});
+
+app.post('/api/admin/reply', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { userId, text, type } = req.body;
+    db.messages.push({ id: Date.now().toString(), userId: userId, sender: 'admin', type: type, text: text, time: new Date().toLocaleTimeString() });
+    saveDB(); res.json({ success: true });
+});
+
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Сервер запущен!`));
