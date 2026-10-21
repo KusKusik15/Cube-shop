@@ -31,10 +31,15 @@
         .inv-category-title { color: var(--blue); font-weight: bold; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px;}
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .inv-card { background: #000; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #222;}
-        .inv-card-name { font-size: 12px; margin-bottom: 8px; color: #ccc; height: 30px; display: flex; align-items: center; justify-content: center;}
-        .inv-controls { display: flex; justify-content: center; align-items: center; gap: 5px; }
-        .inv-controls button { width: 30px; padding: 5px; background: #222; color: white; border: 1px solid #444; font-size: 16px;}
-        .inv-controls input { width: 50px; padding: 5px; margin-bottom: 0; text-align: center; border: 1px solid #444;}
+        .inv-card-name { font-size: 12px; margin-bottom: 8px; color: #ccc; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+        
+        .inv-control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; gap: 5px;}
+        .inv-control-row span { font-size: 10px; color: #888; width: 25px; text-align: left;}
+        
+        .inv-controls { display: flex; justify-content: center; align-items: center; gap: 5px; flex-grow: 1;}
+        .inv-controls button { width: 25px; padding: 5px 0; background: #222; color: white; border: 1px solid #444; font-size: 14px;}
+        .inv-controls input { width: 40px; padding: 5px; margin-bottom: 0; text-align: center; border: 1px solid #444;}
+        .inv-controls input.price-input { color: #ffb703; border-color: #553300;}
 
         .order-item { background: #000; padding: 15px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center;}
         .order-info { flex-grow: 1; }
@@ -84,16 +89,16 @@
 
         <div class="grid">
             <div class="panel">
-                <h3>Управление товарами</h3>
+                <h3>Товары (Кол-во и Цена)</h3>
                 <div id="inventory-list" style="max-height: 600px; overflow-y: auto; padding-right: 10px;"></div>
-                <button onclick="saveInventory()" style="margin-top: 15px;">Сохранить инвентарь</button>
+                <button onclick="saveInventory()" style="margin-top: 15px;">Сохранить всё</button>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 20px;">
                 <div class="panel">
                     <h3 id="news-form-title">Добавить новость</h3>
                     <input type="hidden" id="edit-news-id">
-                    <input type="text" id="news-title" placeholder="Заголовок (например: Обновление сервера)">
+                    <input type="text" id="news-title" placeholder="Заголовок">
                     <textarea id="news-content" rows="3" placeholder="Текст новости..."></textarea>
                     <div style="display: flex; gap: 10px;">
                         <button onclick="saveNews()" style="background: var(--blue); color: #000;" id="news-submit-btn">Опубликовать</button>
@@ -167,7 +172,11 @@
             if (isUpdating) return; isUpdating = true;
             try {
                 const res = await fetch('/api/admin/data');
-                if (res.ok) { adminData = await res.json(); renderInventory(); renderOrders(); renderNews(); renderChatUsers(); if (currentChatUser) openChat(currentChatUser); }
+                if (res.ok) { 
+                    adminData = await res.json(); 
+                    if (!adminData.prices) adminData.prices = {};
+                    renderInventory(); renderOrders(); renderNews(); renderChatUsers(); if (currentChatUser) openChat(currentChatUser); 
+                }
             } catch (e) {} finally { isUpdating = false; setTimeout(loadData, 5000); }
         }
 
@@ -177,13 +186,24 @@
                 let categoryHtml = `<div class="inv-category"><div class="inv-category-title">${category}</div><div class="inv-grid">`;
                 for (const [id, name] of Object.entries(items)) {
                     let val = adminData.inventory[id] !== undefined ? adminData.inventory[id] : 0;
+                    let price = adminData.prices[id] !== undefined ? adminData.prices[id] : 0;
+                    
                     categoryHtml += `
                         <div class="inv-card">
                             <div class="inv-card-name">${name}</div>
-                            <div class="inv-controls">
-                                <button onclick="changeInv('${id}', -1)">-</button>
-                                <input type="number" id="inv-${id}" value="${val}" min="0">
-                                <button onclick="changeInv('${id}', 1)">+</button>
+                            <div class="inv-control-row">
+                                <span>Кол-во:</span>
+                                <div class="inv-controls">
+                                    <button onclick="changeInv('${id}', -1)">-</button>
+                                    <input type="number" id="inv-${id}" value="${val}" min="0">
+                                    <button onclick="changeInv('${id}', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="inv-control-row">
+                                <span>Цена:</span>
+                                <div class="inv-controls">
+                                    <input type="number" class="price-input" id="price-${id}" value="${price}" min="0" placeholder="0">
+                                </div>
                             </div>
                         </div>`;
                 }
@@ -202,13 +222,24 @@
 
         async function saveInventory() {
             let newInv = {};
-            const inputs = document.querySelectorAll('#inventory-list input');
-            inputs.forEach(input => {
+            let newPrices = {};
+            
+            document.querySelectorAll('#inventory-list input[id^="inv-"]').forEach(input => {
                 const id = input.id.replace('inv-', '');
                 newInv[id] = parseInt(input.value) || 0;
             });
-            const res = await fetch('/api/admin/inventory', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newInv) });
-            if(res.ok) alert('Инвентарь сохранен!');
+
+            document.querySelectorAll('#inventory-list input[id^="price-"]').forEach(input => {
+                const id = input.id.replace('price-', '');
+                newPrices[id] = parseInt(input.value) || 0;
+            });
+
+            const res = await fetch('/api/admin/inventory', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ inventory: newInv, prices: newPrices }) 
+            });
+            if(res.ok) alert('Товары и цены сохранены!');
         }
 
         function renderNews() {
@@ -229,54 +260,33 @@
             });
         }
 
-        async function togglePin(id) {
-            await fetch('/api/admin/news/pin', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
-            loadData();
-        }
-
+        async function togglePin(id) { await fetch('/api/admin/news/pin', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadData(); }
         async function saveNews() {
             const id = document.getElementById('edit-news-id').value;
             const title = document.getElementById('news-title').value;
             const content = document.getElementById('news-content').value;
             if (!title || !content) return alert('Заполните заголовок и текст!');
-
             const url = id ? '/api/admin/news/edit' : '/api/admin/news';
             const body = id ? { id, title, content } : { title, content };
-
             await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-            cancelEdit();
-            loadData();
+            cancelEdit(); loadData();
         }
-
         function editNews(id) {
-            const newsItem = adminData.news.find(n => n.id === id);
-            if (!newsItem) return;
-
+            const newsItem = adminData.news.find(n => n.id === id); if (!newsItem) return;
             document.getElementById('edit-news-id').value = newsItem.id;
             document.getElementById('news-title').value = newsItem.title;
             document.getElementById('news-content').value = newsItem.content;
-
             document.getElementById('news-form-title').innerText = 'Редактировать новость';
             document.getElementById('news-submit-btn').innerText = 'Сохранить изменения';
             document.getElementById('news-cancel-btn').style.display = 'block';
-            
             window.scrollTo(0, 0);
         }
-
         function cancelEdit() {
-            document.getElementById('edit-news-id').value = '';
-            document.getElementById('news-title').value = '';
-            document.getElementById('news-content').value = '';
-            document.getElementById('news-form-title').innerText = 'Добавить новость';
-            document.getElementById('news-submit-btn').innerText = 'Опубликовать';
-            document.getElementById('news-cancel-btn').style.display = 'none';
+            document.getElementById('edit-news-id').value = ''; document.getElementById('news-title').value = '';
+            document.getElementById('news-content').value = ''; document.getElementById('news-form-title').innerText = 'Добавить новость';
+            document.getElementById('news-submit-btn').innerText = 'Опубликовать'; document.getElementById('news-cancel-btn').style.display = 'none';
         }
-
-        async function deleteNews(id) {
-            if(!confirm('Удалить новость?')) return;
-            await fetch('/api/admin/news/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
-            loadData();
-        }
+        async function deleteNews(id) { if(!confirm('Удалить новость?')) return; await fetch('/api/admin/news/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadData(); }
 
         function renderOrders() {
             const list = document.getElementById('orders-list');
