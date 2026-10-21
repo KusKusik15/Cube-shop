@@ -126,7 +126,6 @@
     <div id="toast-container"></div>
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
-    <!-- ОБНОВЛЕННОЕ БОКОВОЕ МЕНЮ -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2>Меню</h2>
@@ -153,7 +152,7 @@
                 <div class="submenu-item" onclick="filterCategory('bronze', this)">Бронза</div>
             </div>
 
-            <!-- НОВАЯ КАТЕГОРИЯ ИНСТРУМЕНТЫ -->
+            <!-- ИНСТРУМЕНТЫ (добавлена удочка) -->
             <div class="menu-item" onclick="toggleSubmenu('tools-submenu', this)"><span>Инструменты</span> <span>▼</span></div>
             <div class="submenu" id="tools-submenu">
                 <div class="submenu-item" onclick="filterCategory('sword', this)">Меч</div>
@@ -162,6 +161,7 @@
                 <div class="submenu-item" onclick="filterCategory('shovel', this)">Лопата</div>
                 <div class="submenu-item" onclick="filterCategory('spear', this)">Копьё</div>
                 <div class="submenu-item" onclick="filterCategory('mace', this)">Булава</div>
+                <div class="submenu-item" onclick="filterCategory('fishing_rod', this)">Удочка</div>
             </div>
 
             <div class="menu-item" onclick="filterCategory('food', this)">Еда</div>
@@ -254,7 +254,7 @@
         <button class="footer-btn" onclick="openChatModal('support')">🆘 Поддержка</button>
     </footer>
 
-    <!-- Модалки -->
+    <!-- МОДАЛКИ -->
     <div class="modal-overlay" id="confirmModal">
         <div class="modal">
             <h3 style="font-size: 24px;">Подтверждение</h3>
@@ -266,10 +266,12 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ПРОФИЛЯ (ВОССТАНОВЛЕНА СМЕНА ПАРОЛЯ) -->
     <div class="modal-overlay" id="profileModal">
         <div class="modal">
             <button class="close-modal" onclick="document.getElementById('profileModal').style.display = 'none'">×</button>
             <h3>Профиль</h3>
+            
             <div class="avatar-upload">
                 <div class="big-avatar" id="profile-avatar">?</div>
                 <div>
@@ -277,11 +279,18 @@
                     <input type="file" id="avatar-file" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
                 </div>
             </div>
+            
             <div class="form-group">
-                <label>Игровой ник</label>
+                <label>Игровой ник (для выдачи товара)</label>
                 <input type="text" id="profile-nick" class="form-input" placeholder="Ваш ник в игре">
             </div>
-            <button class="auth-btn" onclick="saveProfile()" style="margin-bottom: 25px;">Сохранить профиль</button>
+            <button class="auth-btn" onclick="saveProfile()" style="margin-bottom: 20px;">Сохранить профиль</button>
+
+            <h3 style="margin-top: 20px; font-size: 18px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">Смена пароля</h3>
+            <div class="form-group"><input type="password" id="old-pass" class="form-input" placeholder="Текущий пароль"></div>
+            <div class="form-group"><input type="password" id="new-pass" class="form-input" placeholder="Новый пароль"></div>
+            <button class="auth-btn" onclick="changePassword()" style="background: #0088cc; color:white; margin-bottom: 20px;">Сменить пароль</button>
+            
             <button class="auth-btn" onclick="window.location.href='/logout'" style="background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d;">Выйти</button>
         </div>
     </div>
@@ -343,23 +352,23 @@
     </div>
 
     <script>
-        // ОБНОВЛЕННЫЙ КАТАЛОГ (добавлены инструменты)
+        // ОБНОВЛЕННЫЙ КАТАЛОГ (Убраны VIP и Алмазные вещи, добавлена Удочка)
         const catalog = [
             { id: 'damass', name: 'Дамасский слиток', category: 'damass', price: 30, currency: 'coins', img: 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.20.1/assets/minecraft/textures/item/netherite_ingot.png' },
             { id: 'copper', name: 'Медный нагрудник', category: 'chestplate', price: 12, currency: 'coins', img: 'https://minecraft.wiki/images/Copper_Chestplate_JE1_BE1.png' },
             { id: 'cobble', name: 'Стак Булыжника', category: 'materials', price: 15, currency: 'coins', img: 'https://minecraft.wiki/images/Cobblestone_JE5_BE3.png' },
-            { id: 'vip', name: 'VIP Статус', category: 'other', price: 99, currency: 'rub', img: 'https://minecraft.wiki/images/Diamond_JE3_BE3.png' },
             
-            // Инструменты (добавлены для примера)
-            { id: 'sword', name: 'Алмазный меч', category: 'sword', price: 50, currency: 'coins', img: 'https://minecraft.wiki/images/Diamond_Sword_JE2_BE2.png' },
-            { id: 'axe', name: 'Алмазный топор', category: 'axe', price: 45, currency: 'coins', img: 'https://minecraft.wiki/images/Diamond_Axe_JE2_BE1.png' },
-            { id: 'pickaxe', name: 'Алмазная кирка', category: 'pickaxe', price: 40, currency: 'coins', img: 'https://minecraft.wiki/images/Diamond_Pickaxe_JE2_BE2.png' }
+            // Инструменты (без алмазных)
+            { id: 'sword', name: 'Железный меч', category: 'sword', price: 50, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Sword_JE2_BE2.png' },
+            { id: 'axe', name: 'Железный топор', category: 'axe', price: 45, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Axe_JE2_BE2.png' },
+            { id: 'pickaxe', name: 'Железная кирка', category: 'pickaxe', price: 40, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Pickaxe_JE2_BE2.png' },
+            { id: 'fishing_rod', name: 'Удочка', category: 'fishing_rod', price: 20, currency: 'coins', img: 'https://minecraft.wiki/images/Fishing_Rod_JE2_BE2.png' }
         ];
 
         let currentUser = null;
         let inventory = {};
         let currentCategory = 'all';
-        let cart = { damass: 1, copper: 1, cobble: 1, vip: 1, sword: 1, axe: 1, pickaxe: 1 };
+        let cart = { damass: 1, copper: 1, cobble: 1, sword: 1, axe: 1, pickaxe: 1, fishing_rod: 1 };
         let itemToBuy = null;
         let currentChatMode = 'seller';
         let currentRating = 5;
@@ -400,7 +409,7 @@
             if (category === 'damass') title = "Дамасс";
             if (category === 'chestplate') title = "Нагрудники";
             if (category === 'materials') title = "Сырьё";
-            if (category === 'sword' || category === 'axe' || category === 'pickaxe' || category === 'shovel' || category === 'spear' || category === 'mace') title = "Инструменты";
+            if (category === 'sword' || category === 'axe' || category === 'pickaxe' || category === 'shovel' || category === 'spear' || category === 'mace' || category === 'fishing_rod') title = "Инструменты";
             
             document.getElementById('page-title').innerText = title;
             renderProducts();
@@ -595,7 +604,13 @@
         }
         async function saveProfile() {
             const res = await fetch('/api/profile/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ gameNick: document.getElementById('profile-nick').value, avatar: currentUser.tempAvatar || currentUser.avatar }) });
-            if (res.ok) { showToast('Сохранено!', 'success'); setTimeout(() => window.location.reload(), 1000); }
+            if (res.ok) { showToast('Профиль сохранен!', 'success'); setTimeout(() => window.location.reload(), 1000); }
+        }
+
+        async function changePassword() {
+            const res = await fetch('/api/profile/password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ oldPass: document.getElementById('old-pass').value, newPass: document.getElementById('new-pass').value }) });
+            const data = await res.json();
+            if (res.ok) { showToast(data.message, 'success'); document.getElementById('old-pass').value = ''; document.getElementById('new-pass').value = ''; } else { showToast(data.message, 'error'); }
         }
 
         async function openOrdersModal() { document.getElementById('ordersModal').style.display = 'flex'; loadOrders(); }
