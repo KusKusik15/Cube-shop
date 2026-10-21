@@ -10,7 +10,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
         body { background-color: var(--bg-dark); background-image: radial-gradient(circle at 50% 0%, #15305a 0%, #061225 70%); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
         
-        /* Шапка */
         header { background-color: rgba(6, 18, 37, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0, 210, 255, 0.2); display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; position: sticky; top: 0; z-index: 100;}
         .header-left { display: flex; align-items: center; gap: 20px; }
         .menu-btn { background: transparent; border: 1px solid var(--text-muted); color: var(--text-main); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 20px; transition: 0.3s; }
@@ -22,7 +21,6 @@
         .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .user-name { font-weight: 600; color: var(--accent); }
 
-        /* Боковое меню */
         .sidebar { position: fixed; top: 0; left: -350px; width: 320px; height: 100vh; background: #0a1120; z-index: 2000; transition: 0.3s; box-shadow: 5px 0 30px rgba(0,0,0,0.8); display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1);}
         .sidebar.open { left: 0; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
@@ -39,22 +37,9 @@
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1500; display: none; backdrop-filter: blur(2px);}
         .overlay.show { display: block; }
 
-        /* ОСНОВНОЙ КОНТЕЙНЕР С ДВУМЯ КОЛОНКАМИ */
-        .main-container { 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 20px; 
-            flex-grow: 1; 
-            width: 100%; 
-            display: grid; 
-            grid-template-columns: 2fr 1fr; /* Магазин шире, новости уже */
-            gap: 30px;
-            align-items: start;
-        }
+        .main-container { max-width: 1400px; margin: 0 auto; padding: 20px; flex-grow: 1; width: 100%; display: grid; grid-template-columns: 2fr 1fr; gap: 30px; align-items: start; }
 
-        /* ЛЕВАЯ КОЛОНКА (МАГАЗИН) */
         .shop-column { width: 100%; }
-        
         .schedule-banner { background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 14px; }
         .schedule-banner b { color: var(--accent); }
         .tg-banner { background: rgba(0, 136, 204, 0.2); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 30px; text-align: center; font-size: 14px; }
@@ -77,24 +62,13 @@
         .buy-btn { background: linear-gradient(90deg, #00d2ff 0%, #0088cc 100%); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; }
         .buy-btn:disabled { background: #333; color: #888; cursor: not-allowed; }
 
-        /* ПРАВАЯ КОЛОНКА (НОВОСТИ) */
-        .news-column {
-            background: var(--bg-panel);
-            border: 1px solid rgba(0, 210, 255, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            position: sticky;
-            top: 90px; /* Прилипает при прокрутке под шапкой */
-            max-height: calc(100vh - 110px);
-            overflow-y: auto;
-        }
+        .news-column { background: var(--bg-panel); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 12px; padding: 20px; position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow-y: auto; }
         .news-title-main { font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;}
         .news-card { background: #061225; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
         .news-date { font-size: 12px; color: #888; margin-bottom: 5px; }
         .news-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 8px; }
         .news-content { font-size: 13px; line-height: 1.5; color: #ccc; white-space: pre-wrap; }
 
-        /* Блок отзывов (оставляем под магазином) */
         .reviews-section { margin-top: 40px; background: var(--bg-panel); padding: 30px; border-radius: 12px; border: 1px solid rgba(0,210,255,0.2); }
         .reviews-title { font-size: 24px; font-weight: 800; margin-bottom: 20px; text-align: center; color: var(--accent);}
         .rating-summary { display: flex; align-items: center; gap: 40px; margin-bottom: 30px; background: #061225; padding: 20px; border-radius: 12px;}
@@ -115,7 +89,6 @@
         .review-text { font-size: 14px; color: var(--text-muted); }
         .review-date { font-size: 11px; color: #555; text-align: right; }
 
-        /* Модалки */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center; z-index: 3000; backdrop-filter: blur(5px); }
         .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; border: 1px solid var(--accent); position: relative; max-height: 90vh; overflow-y: auto; }
         .modal.wide { max-width: 800px; }
@@ -154,13 +127,12 @@
         .order-date { font-size: 11px; color: #555; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; padding-bottom: 5px;}
         .btn-confirm-receipt { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
 
-        /* АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНОВ */
         @media (max-width: 900px) {
-            .main-container { grid-template-columns: 1fr; } /* В одну колонку */
-            .news-column { position: static; max-height: none; order: -1; margin-bottom: 20px; } /* Новости переносятся вверх на телефоне */
+            .main-container { grid-template-columns: 1fr; }
+            .news-column { position: static; max-height: none; order: -1; margin-bottom: 20px; }
             .header-left { gap: 10px; }
             .logo { font-size: 20px; }
-            .user-name { display: none; } /* Скрываем ник в шапке на мобилке */
+            .user-name { display: none; }
         }
     </style>
 </head>
@@ -246,10 +218,8 @@
 
     <div id="shop-screen" style="display:none; flex-direction: column; flex-grow: 1;">
         
-        <!-- ОСНОВНОЙ БЛОК С ДВУМЯ КОЛОНКАМИ -->
         <div class="main-container">
             
-            <!-- ЛЕВАЯ ЧАСТЬ: МАГАЗИН -->
             <div class="shop-column">
                 <div class="schedule-banner">
                     🕒 <b>График выдачи:</b> Ежедневно с 16:00 до 22:00 (МСК). <br>Если не в графике, пишите в чат.
@@ -261,7 +231,6 @@
                 <h1 class="page-title" id="page-title">Магазин ресурсов</h1>
                 <div class="items-grid" id="shop-grid"></div>
 
-                <!-- ОТЗЫВЫ -->
                 <div class="reviews-section">
                     <div class="reviews-title">Отзывы покупателей</div>
                     <div class="rating-summary">
@@ -282,7 +251,6 @@
                 </div>
             </div>
 
-            <!-- ПРАВАЯ ЧАСТЬ: НОВОСТИ -->
             <div class="news-column">
                 <div class="news-title-main">📰 Новости и обновления</div>
                 <div id="news-container">
@@ -493,10 +461,9 @@
             inventory = await invRes.json();
             renderProducts();
             loadPublicReviews();
-            loadNews(); // Загружаем новости в правую колонку
+            loadNews();
         }
 
-        // ЗАГРУЗКА НОВОСТЕЙ В КОЛОНКУ
         async function loadNews() {
             const res = await fetch('/api/news');
             if (res.ok) {
@@ -506,7 +473,7 @@
                 
                 container.innerHTML = news.map(n => `
                     <div class="news-card">
-                        <div class="news-date">${n.date}</div>
+                        <div class="news-date">${n.date} ${n.edited ? `<span style="color:#ffb703; font-size:10px; margin-left:5px;">(Ред. ${n.edited})</span>` : ''}</div>
                         <div class="news-title">${n.title}</div>
                         <div class="news-content">${n.content}</div>
                     </div>
