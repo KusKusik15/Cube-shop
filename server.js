@@ -213,11 +213,18 @@ app.post('/api/order/cancel', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { orderId } = req.body;
     const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
+    
     if (order && (order.status === 'pending' || order.status === 'dispute' || order.status === 'delivered')) {
         order.status = 'cancelled';
+        order.cancelDate = new Date().toLocaleString(); // Сохраняем время отмены
+        
         db.inventory[order.itemId] = (db.inventory[order.itemId] || 0) + order.qty;
+        
         const time = new Date().toLocaleString();
-        db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: 'seller', text: `🚨 ВНИМАНИЕ: Игрок отменил заказ #${order.id} (${order.itemId} x${order.qty}) в ${time}.`, time: time });
+        db.messages.push({ 
+            id: Date.now().toString(), userId: req.user.id, sender: 'user', type: 'seller', 
+            text: `🚨 ВНИМАНИЕ: Игрок отменил заказ #${order.id} (${order.itemId} x${order.qty}) в ${time}.`, time: time 
+        });
         saveDB(); res.json({ success: true });
     } else { res.status(400).json({ message: 'Нельзя отменить' }); }
 });
