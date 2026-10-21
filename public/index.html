@@ -142,7 +142,6 @@
         .btn-review { background: #ffb703; color: black; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
         .btn-tg { background: #0088cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px; text-decoration: none; display: block; text-align: center; box-sizing: border-box;}
 
-        /* Стиль для ссылки на чат в окне подтверждения */
         .chat-link { color: #00d2ff; text-decoration: underline; cursor: pointer; font-weight: bold; }
 
         @media (max-width: 900px) {
@@ -708,10 +707,11 @@
                             <button class="btn-confirm-receipt resolve" onclick="confirmReceipt('${o.id}')">Проблема решена (товар получен)</button>
                             <a href="https://t.me/Kusik155" target="_blank" class="btn-tg">Написать владельцу в TG</a>
                             <button class="btn-dispute" onclick="openChatModal('support')">Написать в техподдержку</button>
+                            <button class="btn-cancel-order" style="background: #444; color: white; border: 1px solid #666;" onclick="cancelOrder('${o.id}')">Отменить заказ (проблема не решена)</button>
                         `;
                     } 
                     else if (o.status === 'cancelled') {
-                        statusHtml = `<span style="color: #ff4d4d">Отменен</span>`;
+                        statusHtml = `<span style="color: #ff4d4d">Отменен ${o.cancelDate ? `<span style="color:#888; font-size:10px;">(${o.cancelDate})</span>` : ''}</span>`;
                     } 
                     else {
                         statusHtml = `<span style="color: #00ff88">Завершен</span>`;
