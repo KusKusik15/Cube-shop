@@ -209,24 +209,34 @@ app.post('/api/order/dispute', (req, res) => {
     else { res.status(400).json({ message: 'Ошибка' }); }
 });
 
+// ИСПРАВЛЕННЫЙ МАРШРУТ ОТМЕНЫ
 app.post('/api/order/cancel', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { orderId } = req.body;
     const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
     
-    if (order && (order.status === 'pending' || order.status === 'dispute' || order.status === 'delivered')) {
-        order.status = 'cancelled';
-        order.cancelDate = new Date().toLocaleString(); // Сохраняем время отмены
-        
+    if (order) {
+        if (order.status === 'pending' || order.status === 'delivered') {
+            order.status = 'cancelled_by_user';
+        } else if (order.status === 'dispute') {
+            order.status = 'cancelled_by_dispute';
+        } else {
+            return res.status(400).json({ message: 'Нельзя отменить' });
+        }
+
+        order.cancelDate = new Date().toLocaleString();
         db.inventory[order.itemId] = (db.inventory[order.itemId] || 0) + order.qty;
         
         const time = new Date().toLocaleString();
         db.messages.push({ 
             id: Date.now().toString(), userId: req.user.id, sender: 'user', type: 'seller', 
-            text: `🚨 ВНИМАНИЕ: Игрок отменил заказ #${order.id} (${order.itemId} x${order.qty}) в ${time}.`, time: time 
+            text: `🚨 ВНИМАНИЕ: Игрок отменил заказ #${order.id} (${order.itemId} x${order.qty}) в ${time}. Причина: ${order.status === 'cancelled_by_user' ? 'По желанию' : 'Спор не решен'}.`, time: time 
         });
-        saveDB(); res.json({ success: true });
-    } else { res.status(400).json({ message: 'Нельзя отменить' }); }
+        saveDB(); 
+        res.json({ success: true });
+    } else { 
+        res.status(400).json({ message: 'Заказ не найден' }); 
+    }
 });
 
 app.get('/api/chat', (req, res) => {
