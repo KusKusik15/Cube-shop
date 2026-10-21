@@ -10,6 +10,16 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
         body { background-color: var(--bg-dark); background-image: radial-gradient(circle at 50% 0%, #15305a 0%, #061225 70%); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
         
+        /* УБИРАЕМ СТРЕЛОЧКИ ВО ВСЕХ INPUT[type="number"] */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
         header { background-color: rgba(6, 18, 37, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0, 210, 255, 0.2); display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; position: sticky; top: 0; z-index: 100;}
         .header-left { display: flex; align-items: center; gap: 20px; }
         .menu-btn { background: transparent; border: 1px solid var(--text-muted); color: var(--text-main); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 20px; transition: 0.3s; }
