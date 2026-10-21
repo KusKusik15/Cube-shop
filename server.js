@@ -49,12 +49,11 @@ function saveDB() {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
 }
 
-// --- ЯНДЕКС ---
+// --- ЯНДЕКС (ОБНОВЛЕНА ССЫЛКА НА NETRUN) ---
 passport.use(new YandexStrategy({
     clientID: 'c0f552be2f44400b80e933f514c19d0f',
     clientSecret: 'dca12e0b6afe4cef90c4adad79dad527',
-    // ВАЖНО: Когда Netrun даст тебе ссылку, поменяй этот URL на свой (например, https://cube.netrun.io/auth/yandex/callback)
-    callbackURL: "http://localhost:3000/auth/yandex/callback"
+    callbackURL: "https://cube-shop.de1.netrun.io/auth/yandex/callback"
   },
   function(accessToken, refreshToken, profile, done) {
     let user = db.users.find(u => u.yandexId === profile.id);
