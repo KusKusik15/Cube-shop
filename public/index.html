@@ -10,15 +10,9 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
         body { background-color: var(--bg-dark); background-image: radial-gradient(circle at 50% 0%, #15305a 0%, #061225 70%); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
         
-        /* УБИРАЕМ СТРЕЛОЧКИ ВО ВСЕХ INPUT[type="number"] */
         input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type="number"] {
-            -moz-appearance: textfield;
-        }
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
 
         header { background-color: rgba(6, 18, 37, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0, 210, 255, 0.2); display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; position: sticky; top: 0; z-index: 100;}
         .header-left { display: flex; align-items: center; gap: 20px; }
@@ -612,12 +606,16 @@
             const list = document.getElementById('my-reviews-list');
             if (res.ok) {
                 const orders = await res.json();
-                const reviewedOrders = orders.filter(o => o.status === 'completed' || o.status === 'cancelled');
+                const reviewedOrders = orders.filter(o => o.status === 'completed' || o.status === 'cancelled_by_user' || o.status === 'cancelled_by_dispute');
                 if (reviewedOrders.length === 0) { list.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Нет заказов.</div>'; return; }
                 list.innerHTML = reviewedOrders.map(o => {
                     const product = catalog.find(c => c.id === o.itemId);
                     const productName = product ? product.name : o.itemId;
-                    let statusBadge = o.status === 'cancelled' ? '<span style="color:#ff4d4d">Отменен</span>' : '<span style="color: #00ff88">Завершен</span>';
+                    let statusBadge = '';
+                    if (o.status === 'completed') statusBadge = '<span style="color: #00ff88">Завершен</span>';
+                    if (o.status === 'cancelled_by_user') statusBadge = '<span style="color:#888">Отменен (по желанию)</span>';
+                    if (o.status === 'cancelled_by_dispute') statusBadge = '<span style="color:#ff4d4d">Отменен (спор)</span>';
+                    
                     return `<div class="order-item" style="flex-direction: row; justify-content: space-between;"><div class="order-info"><span class="order-date">${o.date}</span>Товар: <span>${productName}</span><br>Кол-во: <span>${o.qty}</span><br>Статус: ${statusBadge}</div><div style="width: 150px;">${(o.status === 'completed' && !o.reviewed) ? `<button class="auth-btn" style="font-size: 12px; padding: 10px; background: #ffb703; color: #000;" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>` : (o.reviewed ? '<span style="font-size:12px; color:#00ff88;">✅ Оставлен</span>' : '')}</div></div>`;
                 }).join('');
             }
@@ -720,9 +718,12 @@
                             <button class="btn-cancel-order" style="background: #444; color: white; border: 1px solid #666;" onclick="cancelOrder('${o.id}')">Отменить заказ (проблема не решена)</button>
                         `;
                     } 
-                    else if (o.status === 'cancelled') {
-                        statusHtml = `<span style="color: #ff4d4d">Отменен ${o.cancelDate ? `<span style="color:#888; font-size:10px;">(${o.cancelDate})</span>` : ''}</span>`;
+                    else if (o.status === 'cancelled_by_user') {
+                        statusHtml = `<span style="color: #888">Отменен ${o.cancelDate ? `<span style="color:#888; font-size:10px;">(${o.cancelDate})</span>` : ''}</span>`;
                     } 
+                    else if (o.status === 'cancelled_by_dispute') {
+                        statusHtml = `<span style="color: #ff4d4d">Отменен (спор не решен) ${o.cancelDate ? `<span style="color:#888; font-size:10px;">(${o.cancelDate})</span>` : ''}</span>`;
+                    }
                     else {
                         statusHtml = `<span style="color: #00ff88">Завершен</span>`;
                         if (!o.reviewed) {
