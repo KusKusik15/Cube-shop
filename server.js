@@ -146,9 +146,35 @@ app.post('/api/admin/news', (req, res) => {
         hour: '2-digit', minute: '2-digit' 
     });
 
-    db.news.unshift({ id: Date.now().toString(), title, content, date: dateStr });
+    db.news.unshift({ id: Date.now().toString(), title, content, date: dateStr, edited: null });
     saveDB();
     res.json({ success: true });
+});
+
+app.post('/api/admin/news/edit', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { id, title, content } = req.body;
+    const newsItem = db.news.find(n => n.id === id);
+    
+    if (newsItem) {
+        newsItem.title = title;
+        newsItem.content = content;
+
+        const now = new Date();
+        const mskOffset = 3 * 60; 
+        const localOffset = now.getTimezoneOffset();
+        const mskTime = new Date(now.getTime() + (mskOffset + localOffset) * 60000);
+        
+        newsItem.edited = mskTime.toLocaleString('ru-RU', { 
+            day: '2-digit', month: '2-digit', year: 'numeric', 
+            hour: '2-digit', minute: '2-digit' 
+        });
+        
+        saveDB();
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ message: 'Новость не найдена' });
+    }
 });
 
 app.post('/api/admin/news/delete', (req, res) => {
@@ -242,7 +268,7 @@ app.post('/api/order', (req, res) => {
 app.get('/auth/yandex', passport.authenticate('yandex'));
 app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
 
-// ИСПРАВЛЕННЫЙ ВЫХОД
+// ИСПРАВЛЕННЫЙ ВЫХОД (Кидает на главную)
 app.get('/logout', (req, res, next) => { 
     req.logout((err) => { 
         if (err) return next(err); 
