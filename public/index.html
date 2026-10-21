@@ -152,7 +152,6 @@
                 <div class="submenu-item" onclick="filterCategory('bronze', this)">Бронза</div>
             </div>
 
-            <!-- ИНСТРУМЕНТЫ (добавлена удочка) -->
             <div class="menu-item" onclick="toggleSubmenu('tools-submenu', this)"><span>Инструменты</span> <span>▼</span></div>
             <div class="submenu" id="tools-submenu">
                 <div class="submenu-item" onclick="filterCategory('sword', this)">Меч</div>
@@ -266,7 +265,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА ПРОФИЛЯ (ВОССТАНОВЛЕНА СМЕНА ПАРОЛЯ) -->
     <div class="modal-overlay" id="profileModal">
         <div class="modal">
             <button class="close-modal" onclick="document.getElementById('profileModal').style.display = 'none'">×</button>
@@ -352,13 +350,11 @@
     </div>
 
     <script>
-        // ОБНОВЛЕННЫЙ КАТАЛОГ (Убраны VIP и Алмазные вещи, добавлена Удочка)
         const catalog = [
             { id: 'damass', name: 'Дамасский слиток', category: 'damass', price: 30, currency: 'coins', img: 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.20.1/assets/minecraft/textures/item/netherite_ingot.png' },
             { id: 'copper', name: 'Медный нагрудник', category: 'chestplate', price: 12, currency: 'coins', img: 'https://minecraft.wiki/images/Copper_Chestplate_JE1_BE1.png' },
             { id: 'cobble', name: 'Стак Булыжника', category: 'materials', price: 15, currency: 'coins', img: 'https://minecraft.wiki/images/Cobblestone_JE5_BE3.png' },
             
-            // Инструменты (без алмазных)
             { id: 'sword', name: 'Железный меч', category: 'sword', price: 50, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Sword_JE2_BE2.png' },
             { id: 'axe', name: 'Железный топор', category: 'axe', price: 45, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Axe_JE2_BE2.png' },
             { id: 'pickaxe', name: 'Железная кирка', category: 'pickaxe', price: 40, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Pickaxe_JE2_BE2.png' },
