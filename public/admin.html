@@ -15,7 +15,8 @@
         
         input, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 5px; margin-bottom: 15px; outline: none; font-family: inherit;}
         input:focus, textarea:focus { border-color: var(--accent); }
-        button { background: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        button { background: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s;}
+        button:hover { opacity: 0.9; }
         
         #admin-panel { display: none; max-width: 1400px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
@@ -26,7 +27,6 @@
         .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
         .panel h3 { margin-bottom: 15px; color: #aaa; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
 
-        /* Инвентарь карточками */
         .inv-category { margin-bottom: 20px; }
         .inv-category-title { color: var(--blue); font-weight: bold; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px;}
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -34,13 +34,19 @@
         .inv-card-name { font-size: 12px; margin-bottom: 8px; color: #ccc; height: 30px; display: flex; align-items: center; justify-content: center;}
         .inv-controls { display: flex; justify-content: center; align-items: center; gap: 5px; }
         .inv-controls button { width: 30px; padding: 5px; background: #222; color: white; border: 1px solid #444; font-size: 16px;}
-        .inv-controls button:hover { background: #444; }
         .inv-controls input { width: 50px; padding: 5px; margin-bottom: 0; text-align: center; border: 1px solid #444;}
 
         .order-item { background: #000; padding: 15px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center;}
         .order-info { flex-grow: 1; }
         .btn-complete { background: var(--green); width: auto; padding: 8px 15px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;}
         
+        .news-admin-item { background: #000; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 2px solid var(--blue); }
+        .news-admin-date { font-size: 11px; color: #888; margin-bottom: 5px; }
+        .news-admin-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+        .news-admin-content { font-size: 12px; color: #aaa; margin-bottom: 10px; white-space: pre-wrap; max-height: 60px; overflow-y: auto;}
+        .news-btns { display: flex; gap: 10px; }
+        .news-btns button { width: auto; padding: 5px 10px; font-size: 12px;}
+
         .chat-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
         .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: auto;}
         .chat-tab.active { background: var(--blue); color: #000; border-color: var(--blue); font-weight: bold;}
@@ -83,13 +89,17 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 20px;">
-                <!-- БЛОК НОВОСТЕЙ -->
                 <div class="panel">
-                    <h3>Добавить новость</h3>
+                    <h3 id="news-form-title">Добавить новость</h3>
+                    <input type="hidden" id="edit-news-id">
                     <input type="text" id="news-title" placeholder="Заголовок (например: Обновление сервера)">
                     <textarea id="news-content" rows="3" placeholder="Текст новости..."></textarea>
-                    <button onclick="addNews()" style="background: var(--blue); color: #000;">Опубликовать</button>
-                    <div id="news-list" style="margin-top: 15px; max-height: 200px; overflow-y: auto;"></div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="saveNews()" style="background: var(--blue); color: #000;" id="news-submit-btn">Опубликовать</button>
+                        <button onclick="cancelEdit()" id="news-cancel-btn" style="background: #555; display: none;">Отмена</button>
+                    </div>
+                    
+                    <div id="news-list" style="margin-top: 15px; max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
                 </div>
 
                 <div class="panel">
@@ -162,7 +172,6 @@
 
         function renderInventory() {
             const list = document.getElementById('inventory-list'); list.innerHTML = '';
-            
             for (const [category, items] of Object.entries(itemDatabase)) {
                 let categoryHtml = `<div class="inv-category"><div class="inv-category-title">${category}</div><div class="inv-grid">`;
                 for (const [id, name] of Object.entries(items)) {
@@ -201,28 +210,59 @@
             if(res.ok) alert('Инвентарь сохранен!');
         }
 
-        // НОВОСТИ
-        async function addNews() {
-            const title = document.getElementById('news-title').value;
-            const content = document.getElementById('news-content').value;
-            if (!title || !content) return alert('Заполните заголовок и текст!');
-            
-            await fetch('/api/admin/news', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ title, content }) });
-            document.getElementById('news-title').value = '';
-            document.getElementById('news-content').value = '';
-            loadData();
-        }
-
         function renderNews() {
             const list = document.getElementById('news-list'); list.innerHTML = '';
             if (!adminData.news) return;
             adminData.news.forEach(n => {
-                list.innerHTML += `<div style="background:#000; padding:10px; margin-bottom:5px; border-radius:5px; border-left:2px solid var(--blue);">
-                    <div style="font-size:12px; color:#888;">${n.date}</div>
-                    <div style="font-weight:bold;">${n.title}</div>
-                    <button onclick="deleteNews('${n.id}')" style="width:auto; padding:4px 8px; font-size:10px; margin-top:5px; background:#ff4d4d;">Удалить</button>
+                list.innerHTML += `
+                <div class="news-admin-item">
+                    <div class="news-admin-date">${n.date} ${n.edited ? `(Ред. ${n.edited})` : ''}</div>
+                    <div class="news-admin-title">${n.title}</div>
+                    <div class="news-admin-content">${n.content}</div>
+                    <div class="news-btns">
+                        <button onclick="editNews('${n.id}')" style="background: var(--blue); color: #000;">Редактировать</button>
+                        <button onclick="deleteNews('${n.id}')" style="background: #ff4d4d;">Удалить</button>
+                    </div>
                 </div>`;
             });
+        }
+
+        async function saveNews() {
+            const id = document.getElementById('edit-news-id').value;
+            const title = document.getElementById('news-title').value;
+            const content = document.getElementById('news-content').value;
+            if (!title || !content) return alert('Заполните заголовок и текст!');
+
+            const url = id ? '/api/admin/news/edit' : '/api/admin/news';
+            const body = id ? { id, title, content } : { title, content };
+
+            await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            cancelEdit();
+            loadData();
+        }
+
+        function editNews(id) {
+            const newsItem = adminData.news.find(n => n.id === id);
+            if (!newsItem) return;
+
+            document.getElementById('edit-news-id').value = newsItem.id;
+            document.getElementById('news-title').value = newsItem.title;
+            document.getElementById('news-content').value = newsItem.content;
+
+            document.getElementById('news-form-title').innerText = 'Редактировать новость';
+            document.getElementById('news-submit-btn').innerText = 'Сохранить изменения';
+            document.getElementById('news-cancel-btn').style.display = 'block';
+            
+            window.scrollTo(0, 0);
+        }
+
+        function cancelEdit() {
+            document.getElementById('edit-news-id').value = '';
+            document.getElementById('news-title').value = '';
+            document.getElementById('news-content').value = '';
+            document.getElementById('news-form-title').innerText = 'Добавить новость';
+            document.getElementById('news-submit-btn').innerText = 'Опубликовать';
+            document.getElementById('news-cancel-btn').style.display = 'none';
         }
 
         async function deleteNews(id) {
@@ -231,7 +271,6 @@
             loadData();
         }
 
-        // ЗАКАЗЫ
         function renderOrders() {
             const list = document.getElementById('orders-list');
             if (!adminData.orders || adminData.orders.length === 0) { list.innerHTML = '<div style="color:#666">Нет заказов</div>'; return; }
@@ -256,7 +295,6 @@
             if (res.ok) await loadData(); else { alert('Ошибка'); btn.disabled = false; btn.innerText = 'Выдать'; }
         }
 
-        // ЧАТЫ
         function switchChatTab(type) {
             currentChatType = type;
             document.getElementById('tab-seller').classList.remove('active'); document.getElementById('tab-support').classList.remove('active');
