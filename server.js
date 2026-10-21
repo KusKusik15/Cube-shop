@@ -15,19 +15,20 @@ app.use(passport.session());
 app.use(express.static('public'));
 app.use(express.json({ limit: '50mb' }));
 
+// --- КЛЮЧИ ---
 const publicVapidKey = 'ТВОЙ_PUBLIC_KEY'; 
 const privateVapidKey = 'ТВОЙ_PRIVATE_KEY'; 
 try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, privateVapidKey); } catch(e) {}
 
+// --- БАЗА (С ПОДДЕРЖКОЙ NETRUN) ---
 const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
 
-// ДОБАВЛЕН МАССИВ NEWS
 let db = { users: [], inventory: { damass: 10, copper: 5, cobble: 10 }, orders: [], messages: [], reviews: [], news: [] };
 
 if (process.env.NETRUN) {
     const dataDir = '/data';
     if (!fs.existsSync(dataDir)) {
-        try { fs.mkdirSync(dataDir); } catch(e) {}
+        try { fs.mkdirSync(dataDir); } catch(e) { console.log("Не удалось создать папку /data"); }
     }
 }
 
@@ -38,7 +39,8 @@ if (fs.existsSync(DB_FILE)) {
         if (!db.orders) db.orders = [];
         if (!db.messages) db.messages = [];
         if (!db.reviews) db.reviews = [];
-        if (!db.news) db.news = []; // Проверка на новости
+        if (!db.news) db.news = [];
+        if (!db.inventory) db.inventory = { damass: 10, copper: 5, cobble: 10 };
     } catch (e) {} 
 } else { 
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
@@ -46,6 +48,7 @@ if (fs.existsSync(DB_FILE)) {
 
 function saveDB() { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
 
+// --- ЯНДЕКС ---
 passport.use(new YandexStrategy({
     clientID: 'c0f552be2f44400b80e933f514c19d0f',
     clientSecret: 'dca12e0b6afe4cef90c4adad79dad527',
@@ -60,7 +63,7 @@ passport.use(new YandexStrategy({
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => { const user = db.users.find(u => u.id === id); done(null, user); });
 
-// Пользовательские API
+// --- МАРШРУТЫ ПОЛЬЗОВАТЕЛЯ ---
 app.get('/api/user', (req, res) => {
     if (req.user) res.json({ name: req.user.name, gameNick: req.user.gameNick, avatar: req.user.avatar });
     else res.status(401).json({ error: 'Not logged in' });
@@ -94,6 +97,7 @@ app.get('/api/orders', (req, res) => {
     res.json(db.orders.filter(o => o.userId === req.user.id));
 });
 
+// --- ОТЗЫВЫ ---
 app.get('/api/reviews/all', (req, res) => {
     const allReviews = db.reviews.map(r => {
         const user = db.users.find(u => u.id === r.userId);
@@ -103,6 +107,7 @@ app.get('/api/reviews/all', (req, res) => {
     let total = allReviews.length;
     let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let sum = 0;
+
     allReviews.forEach(r => { if (stats[r.rating] !== undefined) stats[r.rating]++; sum += r.rating; });
     const average = total > 0 ? (sum / total).toFixed(1) : 0;
 
@@ -121,7 +126,7 @@ app.post('/api/reviews/add', (req, res) => {
     res.json({ success: true });
 });
 
-// НОВОСТИ
+// --- НОВОСТИ ---
 app.get('/api/news', (req, res) => {
     res.json(db.news || []);
 });
@@ -129,12 +134,19 @@ app.get('/api/news', (req, res) => {
 app.post('/api/admin/news', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { title, content } = req.body;
-    db.news.unshift({
-        id: Date.now().toString(),
-        title,
-        content,
-        date: new Date().toLocaleString()
+    
+    // Получаем московское время (UTC+3)
+    const now = new Date();
+    const mskOffset = 3 * 60; 
+    const localOffset = now.getTimezoneOffset();
+    const mskTime = new Date(now.getTime() + (mskOffset + localOffset) * 60000);
+    
+    const dateStr = mskTime.toLocaleString('ru-RU', { 
+        day: '2-digit', month: '2-digit', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
     });
+
+    db.news.unshift({ id: Date.now().toString(), title, content, date: dateStr });
     saveDB();
     res.json({ success: true });
 });
@@ -146,7 +158,7 @@ app.post('/api/admin/news/delete', (req, res) => {
     res.json({ success: true });
 });
 
-// Заказы и прочее...
+// --- ЗАКАЗЫ И ЧАТЫ ---
 app.post('/api/order/confirm-receipt', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { orderId } = req.body;
@@ -198,6 +210,7 @@ app.post('/api/chat', (req, res) => {
 
 app.get('/api/inventory', (req, res) => { res.json(db.inventory); });
 
+// --- АВТОРИЗАЦИЯ ---
 app.post('/api/register', async (req, res) => {
     const { login, password, gameNick } = req.body;
     if (db.users.find(u => u.name === login)) return res.status(400).json({ message: 'Логин занят!' });
@@ -228,9 +241,16 @@ app.post('/api/order', (req, res) => {
 
 app.get('/auth/yandex', passport.authenticate('yandex'));
 app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
-app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); res.redirect('/'); }); });
 
-// АДМИНКА
+// ИСПРАВЛЕННЫЙ ВЫХОД
+app.get('/logout', (req, res, next) => { 
+    req.logout((err) => { 
+        if (err) return next(err); 
+        res.redirect('/'); 
+    }); 
+});
+
+// --- АДМИНКА ---
 const ADMIN_PASSWORD = 'admin';
 app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.post('/api/admin/login', (req, res) => { if (req.body.password === ADMIN_PASSWORD) { req.session.isAdmin = true; res.json({ success: true }); } else { res.status(401).json({ message: 'Неверный пароль' }); } });
@@ -239,7 +259,11 @@ app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.j
 
 app.get('/api/admin/data', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    const safeUsers = db.users.map(u => ({ id: u.id, name: u.gameNick || 'Игрок (нет ника)' }));
+    // Отдаем в админку ТОЛЬКО игровой ник (или заглушку), почту не отдаем
+    const safeUsers = db.users.map(u => ({ 
+        id: u.id, 
+        name: u.gameNick || 'Игрок (нет ника)' 
+    }));
     res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, reviews: db.reviews, news: db.news });
 });
 
