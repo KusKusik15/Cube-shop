@@ -41,7 +41,11 @@
 
         .shop-column { width: 100%; }
         
-        .server-banner { background: linear-gradient(90deg, #ff0000, #cc0000); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; font-weight: 800; font-size: 18px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(255,0,0,0.3); letter-spacing: 1px;}
+        .server-banner { background: linear-gradient(90deg, #ff0000, #cc0000); color: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; text-align: center; font-weight: 800; font-size: 18px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(255,0,0,0.3); letter-spacing: 1px;}
+
+        /* НОВЫЙ БЛОК С НИКОМ ПРОДАВЦА */
+        .seller-nick-banner { background: rgba(0, 136, 204, 0.15); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 15px; }
+        .seller-nick-banner b { color: #00d2ff; font-size: 18px; text-shadow: 0 0 10px rgba(0, 210, 255, 0.4);}
 
         .schedule-banner { background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 14px; }
         .schedule-banner b { color: var(--accent); }
@@ -237,6 +241,11 @@
                     ⚠️ Магазин исключительно для сервера #3 АНАРХИЯ ПвП ⚠️
                 </div>
 
+                <!-- НОВЫЙ БЛОК С НИКОМ -->
+                <div class="seller-nick-banner">
+                    👑 Продавец: <b>KusKusik15</b>
+                </div>
+
                 <div class="schedule-banner">
                     🕒 <b>График выдачи:</b> Ежедневно с 16:00 до 22:00 (МСК). <br>Если не в графике, пишите в чат.
                 </div>
@@ -289,7 +298,7 @@
             <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); text-align: left;">
                 <b>Как получить товар:</b><br>
                 1. Создайте заказ на сайте.<br>
-                2. Напишите продавцу в игре (или в чат на сайте).<br>
+                2. Напишите продавцу в игре (ник: <b>KusKusik15</b>).<br>
                 3. Продавец пришлет вам запрос на обмен.<br>
                 4. Подтвердите обмен (вы кладете монеты, он кладет товар).
                 <br><br>
@@ -634,7 +643,6 @@
             const price = prices[itemId] || 0;
             const qty = cart[itemId];
             
-            // ВОЗВРАЩЕНО ПОДРОБНОЕ ОПИСАНИЕ
             document.getElementById('confirm-text').innerHTML = `
                 Вы собираетесь купить <b style="color:var(--accent)">${item.name}</b> в количестве <b>${qty} шт.</b>.<br><br>
                 Итоговая стоимость: <b>${qty * price} монет</b>.<br><br>
