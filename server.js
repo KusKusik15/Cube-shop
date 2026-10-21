@@ -21,7 +21,8 @@ try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, private
 
 const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
 
-let db = { users: [], inventory: { damass: 10, copper: 5, cobble: 10 }, orders: [], messages: [], reviews: [] };
+// ДОБАВЛЕН МАССИВ NEWS
+let db = { users: [], inventory: { damass: 10, copper: 5, cobble: 10 }, orders: [], messages: [], reviews: [], news: [] };
 
 if (process.env.NETRUN) {
     const dataDir = '/data';
@@ -37,6 +38,7 @@ if (fs.existsSync(DB_FILE)) {
         if (!db.orders) db.orders = [];
         if (!db.messages) db.messages = [];
         if (!db.reviews) db.reviews = [];
+        if (!db.news) db.news = []; // Проверка на новости
     } catch (e) {} 
 } else { 
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
@@ -95,17 +97,12 @@ app.get('/api/orders', (req, res) => {
 app.get('/api/reviews/all', (req, res) => {
     const allReviews = db.reviews.map(r => {
         const user = db.users.find(u => u.id === r.userId);
-        return { 
-            id: r.id, 
-            userName: user ? (user.gameNick || 'Игрок') : 'Аноним', 
-            rating: r.rating, text: r.text, itemId: r.itemId, date: r.date 
-        };
+        return { id: r.id, userName: user ? (user.gameNick || 'Игрок') : 'Аноним', rating: r.rating, text: r.text, itemId: r.itemId, date: r.date };
     });
 
     let total = allReviews.length;
     let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let sum = 0;
-
     allReviews.forEach(r => { if (stats[r.rating] !== undefined) stats[r.rating]++; sum += r.rating; });
     const average = total > 0 ? (sum / total).toFixed(1) : 0;
 
@@ -124,14 +121,38 @@ app.post('/api/reviews/add', (req, res) => {
     res.json({ success: true });
 });
 
+// НОВОСТИ
+app.get('/api/news', (req, res) => {
+    res.json(db.news || []);
+});
+
+app.post('/api/admin/news', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { title, content } = req.body;
+    db.news.unshift({
+        id: Date.now().toString(),
+        title,
+        content,
+        date: new Date().toLocaleString()
+    });
+    saveDB();
+    res.json({ success: true });
+});
+
+app.post('/api/admin/news/delete', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    db.news = db.news.filter(n => n.id !== req.body.id);
+    saveDB();
+    res.json({ success: true });
+});
+
+// Заказы и прочее...
 app.post('/api/order/confirm-receipt', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { orderId } = req.body;
     const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
     if (order && (order.status === 'delivered' || order.status === 'dispute')) {
-        order.status = 'completed';
-        saveDB();
-        res.json({ success: true });
+        order.status = 'completed'; saveDB(); res.json({ success: true });
     } else { res.status(400).json({ message: 'Ошибка' }); }
 });
 
@@ -139,11 +160,8 @@ app.post('/api/order/dispute', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { orderId } = req.body;
     const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
-    if (order && order.status === 'delivered') {
-        order.status = 'dispute'; 
-        saveDB();
-        res.json({ success: true });
-    } else { res.status(400).json({ message: 'Ошибка' }); }
+    if (order && order.status === 'delivered') { order.status = 'dispute'; saveDB(); res.json({ success: true }); } 
+    else { res.status(400).json({ message: 'Ошибка' }); }
 });
 
 app.post('/api/order/cancel', (req, res) => {
@@ -154,14 +172,9 @@ app.post('/api/order/cancel', (req, res) => {
     if (order && (order.status === 'pending' || order.status === 'dispute' || order.status === 'delivered')) {
         order.status = 'cancelled';
         db.inventory[order.itemId] = (db.inventory[order.itemId] || 0) + order.qty;
-        
         const time = new Date().toLocaleString();
-        db.messages.push({ 
-            id: Date.now().toString(), userId: req.user.id, sender: 'user', type: 'seller', 
-            text: `🚨 ВНИМАНИЕ: Игрок отменил заказ #${order.id} (${order.itemId} x${order.qty}) в ${time}.`, time: time 
-        });
-        saveDB();
-        res.json({ success: true });
+        db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: 'seller', text: `🚨 ВНИМАНИЕ: Игрок отменил заказ #${order.id} (${order.itemId} x${order.qty}) в ${time}.`, time: time });
+        saveDB(); res.json({ success: true });
     } else { res.status(400).json({ message: 'Нельзя отменить' }); }
 });
 
@@ -175,12 +188,8 @@ app.post('/api/chat', (req, res) => {
     const { text, type } = req.body;
     db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: type, text: text, time: new Date().toLocaleTimeString() });
     saveDB();
-    
     setTimeout(() => {
-        let autoText = type === 'support' 
-            ? 'Ваше обращение принято в техподдержку. Пожалуйста, опишите проблему подробнее и ожидайте ответа администратора.'
-            : 'Сообщение отправлено продавцу (KusKusik15). Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155.';
-        
+        let autoText = type === 'support' ? 'Ваше обращение принято в техподдержку. Пожалуйста, опишите проблему подробнее и ожидайте ответа администратора.' : 'Сообщение отправлено продавцу (KusKusik15). Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155.';
         db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'admin', type: type, text: autoText, time: new Date().toLocaleTimeString() });
         saveDB();
     }, 1000);
@@ -211,26 +220,15 @@ app.post('/api/order', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Вы не авторизованы!' });
     const { itemId, qty, gameNick, currency } = req.body;
     if (!db.inventory[itemId] || db.inventory[itemId] < qty) return res.status(400).json({ message: 'Нет в наличии!' });
-    
     db.inventory[itemId] -= qty;
-    db.orders.push({ 
-        id: Date.now().toString(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, 
-        status: 'pending', reviewed: false,
-        date: new Date().toLocaleString() 
-    });
+    db.orders.push({ id: Date.now().toString(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, status: 'pending', reviewed: false, date: new Date().toLocaleString() });
     saveDB();
     res.json({ message: `Заказ создан!` });
 });
 
-// ВХОД/ВЫХОД
 app.get('/auth/yandex', passport.authenticate('yandex'));
 app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
-app.get('/logout', (req, res, next) => { 
-    req.logout((err) => { 
-        if (err) return next(err); 
-        res.redirect('/'); // ИСПРАВЛЕНО: теперь кидает на главную, а не на /login
-    }); 
-});
+app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); res.redirect('/'); }); });
 
 // АДМИНКА
 const ADMIN_PASSWORD = 'admin';
@@ -241,20 +239,15 @@ app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.j
 
 app.get('/api/admin/data', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    const safeUsers = db.users.map(u => ({ 
-        id: u.id, 
-        name: u.gameNick || 'Игрок (нет ника)' 
-    }));
-    res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, reviews: db.reviews });
+    const safeUsers = db.users.map(u => ({ id: u.id, name: u.gameNick || 'Игрок (нет ника)' }));
+    res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, reviews: db.reviews, news: db.news });
 });
 
 app.post('/api/admin/inventory', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     let newInv = {};
     for (let key in req.body) { newInv[key] = parseInt(req.body[key]) || 0; }
-    db.inventory = newInv;
-    saveDB();
-    res.json({ success: true });
+    db.inventory = newInv; saveDB(); res.json({ success: true });
 });
 
 app.post('/api/admin/complete-order', (req, res) => {
@@ -269,8 +262,7 @@ app.post('/api/admin/reply', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, text, type } = req.body;
     db.messages.push({ id: Date.now().toString(), userId: userId, sender: 'admin', type: type, text: text, time: new Date().toLocaleTimeString() });
-    saveDB();
-    res.json({ success: true });
+    saveDB(); res.json({ success: true });
 });
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
