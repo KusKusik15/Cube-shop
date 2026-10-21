@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Shop | Магазин ресурсов</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-dark: #061225; --bg-panel: #0f2442; --text-main: #e6f1ff; --text-muted: #8892b0; --accent: #00d2ff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
+        body { background-color: var(--bg-dark); background-image: radial-gradient(circle at 50% 0%, #15305a 0%, #061225 70%); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+        
+        header { background-color: rgba(6, 18, 37, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0, 210, 255, 0.2); display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; position: sticky; top: 0; z-index: 100;}
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .menu-btn { background: transparent; border: 1px solid var(--text-muted); color: var(--text-main); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 20px; transition: 0.3s; }
+        .menu-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .logo { font-size: 26px; font-weight: 800; color: var(--accent); text-transform: uppercase; }
+        .user-profile { display: flex; align-items: center; gap: 15px; cursor: pointer; padding: 5px 10px; border-radius: 20px; transition: 0.3s; }
+        .user-profile:hover { background: rgba(0, 210, 255, 0.1); }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--bg-dark); overflow: hidden; }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .user-name { font-weight: 600; color: var(--accent); }
+
+        .sidebar { position: fixed; top: 0; left: -350px; width: 320px; height: 100vh; background: #0a1120; z-index: 2000; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 5px 0 30px rgba(0,0,0,0.8); display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1);}
+        .sidebar.open { left: 0; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h2 { font-size: 20px; color: var(--accent); }
+        .close-btn { background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .sidebar-menu { flex-grow: 1; overflow-y: auto; padding: 10px 0; }
+        .menu-item { padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: var(--text-main); transition: 0.2s; border-left: 3px solid transparent; }
+        .menu-item:hover { background: rgba(0, 210, 255, 0.05); border-left-color: var(--accent); }
+        .menu-item.active { background: rgba(0, 210, 255, 0.1); border-left-color: var(--accent); color: var(--accent); font-weight: 600;}
+        .submenu { display: none; background: #050a14; padding: 10px 0; }
+        .submenu.open { display: block; }
+        .submenu-item { padding: 10px 20px 10px 40px; font-size: 14px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .submenu-item:hover { color: var(--accent); }
+        .submenu-category { font-size: 11px; text-transform: uppercase; color: #555; padding: 10px 20px 5px 40px; font-weight: 800; letter-spacing: 1px;}
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1500; display: none; backdrop-filter: blur(2px);}
+        .overlay.show { display: block; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; flex-grow: 1; width: 100%; }
+        
+        .schedule-banner { background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 14px; color: var(--text-main); }
+        .schedule-banner b { color: var(--accent); }
+        .tg-banner { background: rgba(0, 136, 204, 0.2); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 30px; text-align: center; font-size: 14px; }
+        .tg-banner a { color: #00d2ff; font-weight: bold; text-decoration: none;}
+
+        .promo-banner { background: linear-gradient(90deg, #ff4d4d, #f5b041); color: #000; padding: 15px 20px; border-radius: 12px; margin-bottom: 30px; font-weight: 800; text-align: center; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 20px rgba(255, 77, 77, 0.2);}
+        .page-title { text-align: center; margin-bottom: 30px; font-weight: 800; text-shadow: 0 0 20px rgba(0,210,255,0.3); }
+        
+        .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+        .card { background: linear-gradient(180deg, var(--bg-panel) 0%, #0a192f 100%); border-radius: 12px; padding: 25px 20px; text-align: center; border: 1px solid rgba(0, 210, 255, 0.2); display: flex; flex-direction: column; transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); border-color: var(--accent); }
+        .card.out-of-stock { opacity: 0.6; filter: grayscale(1); }
+        .card-img { width: 100px; height: 100px; margin: 0 auto 15px; object-fit: contain; }
+        .card h3 { font-size: 18px; margin-bottom: 5px; }
+        
+        .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; }
+        .quantity-control { display: flex; align-items: center; background: #061225; border: 1px solid rgba(0, 210, 255, 0.3); border-radius: 6px; overflow: hidden; }
+        .quantity-control button { background: transparent; border: none; color: var(--accent); font-size: 18px; font-weight: bold; width: 30px; height: 30px; cursor: pointer; }
+        .quantity-control input { width: 40px; background: transparent; border: none; color: white; text-align: center; font-size: 15px; font-weight: bold; outline: none; }
+        .card .price { font-size: 18px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+        .card .price span { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+
+        .buy-btn { background: linear-gradient(90deg, #00d2ff 0%, #0088cc 100%); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; }
+        .buy-btn:disabled { background: #333; color: #888; cursor: not-allowed; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center; z-index: 3000; backdrop-filter: blur(5px); }
+        .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; border: 1px solid var(--accent); position: relative; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);}
+        .modal.wide { max-width: 800px; }
+        .close-modal { position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .modal h3 { color: var(--accent); margin-bottom: 20px; text-align: center;}
+        
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
+        .form-input { width: 100%; padding: 12px; background: #061225; border: 1px solid rgba(0, 210, 255, 0.3); border-radius: 6px; color: white; outline: none; }
+        .auth-btn { background: var(--accent); color: #061225; border: none; padding: 12px; border-radius: 6px; font-weight: 800; cursor: pointer; width: 100%; transition: 0.3s; text-decoration: none; display: block; text-align: center; margin-bottom: 5px;}
+        .auth-btn:hover { background: #fff; box-shadow: 0 0 15px var(--accent); }
+        .auth-btn.cancel { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); }
+        .auth-btn.dispute { background: #ff4d4d; color: white; }
+        .auth-btn.cancel-order { background: #ffb703; color: black;}
+        .auth-btn.resolve { background: #28a745; color: white;}
+        
+        .chat-messages { height: 300px; overflow-y: auto; background: #061225; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;}
+        .msg { padding: 10px; border-radius: 8px; max-width: 80%; font-size: 14px; line-height: 1.4;}
+        .msg.user { background: var(--accent); color: var(--bg-dark); align-self: flex-end; border-bottom-right-radius: 0;}
+        .msg.admin { background: var(--bg-panel); border: 1px solid rgba(0,210,255,0.3); align-self: flex-start; border-bottom-left-radius: 0;}
+        .chat-input-row { display: flex; gap: 10px; }
+        
+        .avatar-upload { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .big-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--bg-dark); font-weight: bold; overflow: hidden;}
+        .big-avatar img { width: 100%; height: 100%; object-fit: cover;}
+
+        footer { padding: 20px; background: rgba(6, 18, 37, 0.8); border-top: 1px solid rgba(0, 210, 255, 0.1); display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;}
+        .footer-btn { background: transparent; border: none; color: var(--text-muted); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;}
+        .footer-btn:hover { color: var(--accent); }
+
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: var(--bg-panel); color: white; padding: 15px 20px; border-radius: 8px; border-left: 4px solid var(--accent); box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-size: 14px; font-weight: 600; min-width: 250px; max-width: 350px; transform: translateX(120%); transition: 0.3s; opacity: 0; display: flex; align-items: center; gap: 10px; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast.error { border-left-color: #ff4d4d; }
+        .toast.success { border-left-color: #00ff88; }
+
+        .order-item { background: #061225; border: 1px solid rgba(0,210,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; text-align: left; display: flex; flex-direction: column; gap: 10px;}
+        .order-info span { color: var(--accent); font-weight: bold;}
+        .order-date { font-size: 11px; color: #555; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; padding-bottom: 5px;}
+        .btn-confirm-receipt { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        
+        .reviews-section { margin-top: 50px; background: var(--bg-panel); padding: 20px; border-radius: 12px; border: 1px solid rgba(0,210,255,0.2); }
+        .reviews-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; text-align: center; color: var(--accent);}
+        .review-card { background: #061225; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
+        .review-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; }
+        .review-user { font-weight: bold; color: #fff; }
+        .review-stars { color: #ffb703; }
+        .review-text { font-size: 14px; color: var(--text-muted); }
+        .review-date { font-size: 11px; color: #555; text-align: right; }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Меню</h2>
+            <button class="close-btn" onclick="toggleSidebar()">×</button>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item active" onclick="filterCategory('all', this)">Главная</div>
+            <div class="menu-item" onclick="toggleSubmenu('armor-submenu', this)"><span>Броня</span> <span>▼</span></div>
+            <div class="submenu" id="armor-submenu">
+                <div class="submenu-category">Материал</div>
+                <div class="submenu-item" onclick="filterCategory('damass-armor', this)">Дамасс</div>
+                <div class="submenu-item" onclick="filterCategory('steel', this)">Сталь</div>
+                <div class="submenu-item" onclick="filterCategory('iron', this)">Железо</div>
+                <div class="submenu-item" onclick="filterCategory('gold', this)">Золото</div>
+                <div class="submenu-item" onclick="filterCategory('copper', this)">Медь</div>
+                <div class="submenu-item" onclick="filterCategory('bronze', this)">Бронза</div>
+                <div class="submenu-category" style="margin-top: 10px;">Тип брони</div>
+                <div class="submenu-item" onclick="filterCategory('helmet', this)">Нашлемник</div>
+                <div class="submenu-item" onclick="filterCategory('chestplate', this)">Нагрудник</div>
+                <div class="submenu-item" onclick="filterCategory('leggings', this)">Штаны</div>
+                <div class="submenu-item" onclick="filterCategory('boots', this)">Сапоги</div>
+            </div>
+            <div class="menu-item" onclick="filterCategory('building', this)">Строительство</div>
+            <div class="menu-item" onclick="filterCategory('currency', this)">Валюта</div>
+            <div class="menu-item" onclick="showToast('Курс цен скоро появится!', 'info')">Курс цен</div>
+            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 10px 20px;"></div>
+            <div class="menu-item" onclick="openMyReviewsModal()" style="color: #ffb703;">⭐ Мои отзывы</div>
+        </div>
+    </div>
+
+    <header>
+        <div class="header-left">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="logo">Cube Shop</div>
+        </div>
+        <div class="user-profile" onclick="openProfileModal()">
+            <div class="user-avatar" id="header-avatar">?</div>
+            <span id="user-name" class="user-name">Загрузка...</span>
+        </div>
+    </header>
+
+    <div id="auth-screen" style="display:none; align-items: center; justify-content: center; flex-grow: 1; padding: 20px;">
+         <div class="modal" style="display:block; position:static;">
+            <h3>Вход в Cube Shop</h3>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group"><input type="text" id="login-name" class="form-input" placeholder="Логин" required></div>
+                <div class="form-group"><input type="password" id="login-pass" class="form-input" placeholder="Пароль" required></div>
+                <button type="submit" class="auth-btn">Войти</button>
+            </form>
+            <div style="margin: 20px 0; text-align: center; color: var(--text-muted); font-size: 14px;">или</div>
+            <a href="/auth/yandex" class="auth-btn" style="background: #fc3f1d; color: white;">Войти через Яндекс ID</a>
+         </div>
+    </div>
+
+    <div id="shop-screen" style="display:none; flex-direction: column; flex-grow: 1;">
+        <div class="container">
+            <div class="schedule-banner">
+                🕒 <b>График выдачи товаров:</b> Ежедневно с 16:00 до 22:00 (МСК). <br>
+                Если вы купили товар в другое время, напишите в <b>«Чат с продавцом»</b>, чтобы договориться.
+            </div>
+            <div class="tg-banner">
+                📱 Связаться с владельцем напрямую в Telegram: <a href="https://t.me/Kusik155" target="_blank">@Kusik155</a>
+            </div>
+            
+            <div class="promo-banner">
+                <div>🔥 <span>Скоро!</span> Глобальные скидки на все ресурсы</div>
+            </div>
+            
+            <h1 class="page-title" id="page-title">Магазин ресурсов</h1>
+            <div class="items-grid" id="shop-grid"></div>
+
+            <div class="reviews-section">
+                <div class="reviews-title">Отзывы покупателей</div>
+                <div id="public-reviews"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <button class="footer-btn" onclick="openOrdersModal()">📦 Мои заказы</button>
+        <button class="footer-btn" style="color: var(--accent);" onclick="openChatModal('seller')">💬 Чат с продавцом</button>
+        <button class="footer-btn" onclick="openChatModal('support')">🆘 Поддержка</button>
+    </footer>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h3 style="font-size: 24px;">Подтверждение</h3>
+            <p style="text-align: center; color: var(--text-main); font-size: 16px; margin-bottom: 20px;" id="confirm-text"></p>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
+                Выдача товара вручную (ник продавца: <b>KusKusik15</b>).
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="auth-btn cancel" onclick="document.getElementById('confirmModal').style.display = 'none'">Отмена</button>
+                <button class="auth-btn" onclick="executeBuy()">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('profileModal').style.display = 'none'">×</button>
+            <h3>Профиль</h3>
+            <div class="avatar-upload">
+                <div class="big-avatar" id="profile-avatar">?</div>
+                <div>
+                    <label for="avatar-file" class="auth-btn" style="display:inline-block; padding: 8px 15px; width: auto; cursor: pointer;">Загрузить фото</label>
+                    <input type="file" id="avatar-file" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Игровой ник (для выдачи товара)</label>
+                <input type="text" id="profile-nick" class="form-input" placeholder="Ваш ник в игре">
+            </div>
+            <button class="auth-btn" onclick="saveProfile()" style="margin-bottom: 25px;">Сохранить профиль</button>
+
+            <h3 style="margin-top: 20px; font-size: 18px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">Смена пароля</h3>
+            <div class="form-group"><input type="password" id="old-pass" class="form-input" placeholder="Текущий пароль"></div>
+            <div class="form-group"><input type="password" id="new-pass" class="form-input" placeholder="Новый пароль"></div>
+            <button class="auth-btn" onclick="changePassword()" style="background: #0088cc; color:white;">Сменить пароль</button>
+            
+            <button class="auth-btn" onclick="window.location.href='/logout'" style="margin-top: 20px; background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d;">Выйти из аккаунта</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="ordersModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('ordersModal').style.display = 'none'">×</button>
+            <h3>История покупок</h3>
+            <div id="orders-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="myReviewsModal">
+        <div class="modal wide">
+            <button class="close-modal" onclick="document.getElementById('myReviewsModal').style.display = 'none'">×</button>
+            <h3>Мои отзывы и история</h3>
+            <div id="my-reviews-list" style="max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chatModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('chatModal').style.display = 'none'">×</button>
+            <h3 style="text-align: left; font-size:18px; display: flex; align-items: center; gap: 10px;" id="chat-title">💬 Чат</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; text-align: left;" id="chat-desc"></p>
+            <div class="chat-messages" id="chat-box"></div>
+            <div class="chat-input-row">
+                <input type="text" id="chat-input" class="form-input" placeholder="Сообщение..." onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button class="auth-btn" style="width: 50px; padding: 0;" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="reviewModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('reviewModal').style.display = 'none'">×</button>
+            <h3>Оставить отзыв</h3>
+            <p style="text-align: center; margin-bottom: 15px; font-size: 14px;">Пожалуйста, оцените качество товара.</p>
+            <div style="text-align: center; font-size: 30px; margin-bottom: 15px; cursor: pointer;" id="star-rating">
+                <span onclick="setRating(1)" id="star1">☆</span>
+                <span onclick="setRating(2)" id="star2">☆</span>
+                <span onclick="setRating(3)" id="star3">☆</span>
+                <span onclick="setRating(4)" id="star4">☆</span>
+                <span onclick="setRating(5)" id="star5">☆</span>
+            </div>
+            <div class="form-group">
+                <textarea id="review-text" class="form-input" rows="3" placeholder="Ваш отзыв..."></textarea>
+            </div>
+            <button class="auth-btn" onclick="submitReview()">Отправить отзыв</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="disputeModal">
+        <div class="modal">
+            <h3 style="color: #ff4d4d;">Товар не получен?</h3>
+            <p style="text-align: center; margin-bottom: 20px; font-size: 14px;">Если вы не получили товар, хотя статус изменился, свяжитесь с владельцем или поддержкой.</p>
+            <a href="https://t.me/Kusik155" target="_blank" class="auth-btn" style="background: #0088cc; margin-bottom: 10px;">Написать в Telegram @Kusik155</a>
+            <button class="auth-btn" style="background: #ff4d4d; margin-bottom: 10px;" onclick="document.getElementById('disputeModal').style.display = 'none'; openChatModal('support');">Написать в техподдержку</button>
+            <button class="auth-btn cancel" onclick="document.getElementById('disputeModal').style.display = 'none'">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        const catalog = [
+            { id: 'damass', name: 'Дамасский слиток', category: 'damass', price: 30, currency: 'coins', img: 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.20.1/assets/minecraft/textures/item/netherite_ingot.png' },
+            { id: 'copper', name: 'Медный нагрудник', category: 'copper-armor', price: 12, currency: 'coins', img: 'https://minecraft.wiki/images/Copper_Chestplate_JE1_BE1.png' },
+            { id: 'cobble', name: 'Стак Булыжника', category: 'building', price: 15, currency: 'coins', img: 'https://minecraft.wiki/images/Cobblestone_JE5_BE3.png' },
+            { id: 'vip', name: 'VIP Статус', category: 'other', price: 99, currency: 'rub', img: 'https://minecraft.wiki/images/Diamond_JE3_BE3.png' }
+        ];
+
+        let currentUser = null;
+        let inventory = {};
+        let currentCategory = 'all';
+        let cart = { damass: 1, copper: 1, cobble: 1, vip: 1 };
+        let itemToBuy = null;
+        let currentChatMode = 'seller';
+        let currentRating = 5;
+        let reviewingOrderId = null;
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        function toggleSubmenu(id, element) {
+            const submenu = document.getElementById(id);
+            submenu.classList.toggle('open');
+            element.querySelector('span:last-child').innerText = submenu.classList.contains('open') ? '▲' : '▼';
+        }
+
+        function filterCategory(category, element) {
+            currentCategory = category;
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            let title = "Магазин ресурсов";
+            if (category === 'damass-armor') title = "Дамасс (Броня)";
+            if (category === 'copper-armor') title = "Медная броня";
+            if (category === 'building') title = "Строительные блоки";
+            document.getElementById('page-title').innerText = title;
+            
+            renderProducts();
+            if (window.innerWidth < 800) toggleSidebar();
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️';
+            toast.innerHTML = `<span class="toast-icon">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+        }
+
+        window.onload = async () => {
+            try {
+                const res = await fetch('/api/user');
+                if (res.ok) { currentUser = await res.json(); showShop(); } 
+                else { document.getElementById('auth-screen').style.display = 'flex'; }
+            } catch(e) { document.getElementById('auth-screen').style.display = 'flex'; }
+        };
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ login: document.getElementById('login-name').value, password: document.getElementById('login-pass').value }) });
+            if (res.ok) { window.location.reload(); } else { showToast('Неверный логин или пароль', 'error'); }
+        }
+
+        async function showShop() {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('shop-screen').style.display = 'flex';
+            document.getElementById('user-name').innerText = currentUser.gameNick || currentUser.name;
+            const avatarBox = document.getElementById('header-avatar');
+            if (currentUser.avatar) avatarBox.innerHTML = `<img src="${currentUser.avatar}">`;
+            else avatarBox.innerText = (currentUser.name || '?')[0].toUpperCase();
+            document.getElementById('profile-avatar').innerHTML = avatarBox.innerHTML;
+            document.getElementById('profile-nick').value = currentUser.gameNick || '';
+
+            const invRes = await fetch('/api/inventory');
+            inventory = await invRes.json();
+            renderProducts();
+            loadPublicReviews();
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = '';
+            const filtered = catalog.filter(item => {
+                if (currentCategory === 'all') return true;
+                return item.category.includes(currentCategory);
+            });
+
+            filtered.forEach(item => {
+                const stock = inventory[item.id] || 0;
+                const isOut = stock <= 0;
+                const currencyStr = item.currency === 'rub' ? '₽' : 'монет';
+                const qty = cart[item.id] || 1;
+                const totalPrice = qty * item.price;
+
+                let stockColor = "#00ff88"; 
+                if (stock > 0 && stock <= 5) stockColor = "#ffb703"; 
+                if (isOut) stockColor = "#ff4d4d";
+
+                const card = document.createElement('div');
+                card.className = `card ${isOut ? 'out-of-stock' : ''}`;
+                card.innerHTML = `
+                    <img src="${item.img}" class="card-img">
+                    <h3>${item.name}</h3>
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 15px; color: ${stockColor}; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px;">
+                        ${isOut ? 'Нет в наличии' : `В наличии: ${stock} шт.`}
+                    </div>
+                    <div class="price-row">
+                        <div class="quantity-control">
+                            <button onclick="changeQty('${item.id}', -1)">-</button>
+                            <input type="number" id="qty-${item.id}" value="${qty}" min="1" max="99" onchange="handleManualQty('${item.id}', this.value)">
+                            <button onclick="changeQty('${item.id}', 1)">+</button>
+                        </div>
+                        <div class="price" id="price-${item.id}">${totalPrice} <span>${currencyStr}</span></div>
+                    </div>
+                    <button class="buy-btn" ${isOut ? 'disabled' : `onclick="openConfirm('${item.id}')"`}>${isOut ? 'Нет в наличии' : 'Купить'}</button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        async function loadPublicReviews() {
+            const res = await fetch('/api/reviews/all');
+            if (res.ok) {
+                const reviews = await res.json();
+                const container = document.getElementById('public-reviews');
+                if (reviews.length === 0) {
+                    container.innerHTML = '<div style="color: var(--text-muted); text-align: center;">Пока нет отзывов. Станьте первым!</div>';
+                    return;
+                }
+                
+                container.innerHTML = reviews.map(r => {
+                    const product = catalog.find(c => c.id === r.itemId);
+                    const productName = product ? product.name : r.itemId;
+                    let stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+                    return `
+                        <div class="review-card">
+                            <div class="review-header">
+                                <span class="review-user">${r.userName} (${productName})</span>
+                                <span class="review-stars">${stars}</span>
+                            </div>
+                            <div class="review-text">${r.text || 'Без текста'}</div>
+                            <div class="review-date">${r.date}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function openMyReviewsModal() {
+            document.getElementById('myReviewsModal').style.display = 'flex';
+            const res = await fetch('/api/orders');
+            const list = document.getElementById('my-reviews-list');
+            
+            if (res.ok) {
+                const orders = await res.json();
+                const reviewedOrders = orders.filter(o => o.status === 'completed' || o.status === 'cancelled');
+                
+                if (reviewedOrders.length === 0) {
+                    list.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">У вас пока нет завершенных заказов.</div>';
+                    return;
+                }
+
+                list.innerHTML = reviewedOrders.map(o => {
+                    const product = catalog.find(c => c.id === o.itemId);
+                    const productName = product ? product.name : o.itemId;
+                    let statusBadge = o.status === 'cancelled' ? '<span style="color:#ff4d4d">Отменен</span>' : '<span style="color: #00ff88">Завершен</span>';
+                    
+                    return `
+                    <div class="order-item" style="flex-direction: row; align-items: center; justify-content: space-between;">
+                        <div class="order-info">
+                            <span class="order-date">${o.date || 'Дата не указана'}</span>
+                            Товар: <span>${productName}</span><br>
+                            Кол-во: <span>${o.qty}</span><br>
+                            Статус: ${statusBadge}
+                        </div>
+                        <div style="width: 200px;">
+                            ${(o.status === 'completed' && o.reviewed) ? '<span style="font-size:13px; color:#00ff88; text-align: center; display: block;">✅ Отзыв оставлен</span>' : ''}
+                            ${(o.status === 'completed' && !o.reviewed) ? `<button class="auth-btn" style="font-size: 12px; padding: 10px; background: #ffb703; color: #000;" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>` : ''}
+                            ${o.status === 'cancelled' ? '<span style="font-size:12px; color:#ff4d4d; text-align: center; display: block;">Заказ отменен</span>' : ''}
+                        </div>
+                    </div>
+                `}).join('');
+            }
+        }
+
+        function changeQty(itemId, change) {
+            let newQty = cart[itemId] + change;
+            if (newQty < 1) newQty = 1;
+            if (newQty > 99) newQty = 99;
+            cart[itemId] = newQty;
+            updateItemPrice(itemId);
+        }
+
+        function handleManualQty(itemId, value) {
+            let newQty = parseInt(value);
+            if (isNaN(newQty) || newQty < 1) newQty = 1;
+            if (newQty > 99) newQty = 99;
+            cart[itemId] = newQty;
+            updateItemPrice(itemId);
+        }
+
+        function updateItemPrice(itemId) {
+            const qty = cart[itemId];
+            const item = catalog.find(i => i.id === itemId);
+            const totalPrice = qty * item.price;
+            document.getElementById(`qty-${itemId}`).value = qty;
+            document.getElementById(`price-${itemId}`).innerHTML = `${totalPrice} <span>${item.currency === 'rub' ? '₽' : 'монет'}</span>`;
+        }
+
+        function openConfirm(itemId) {
+            if (!currentUser.gameNick) { showToast('Сначала укажите игровой ник в профиле!', 'error'); return; }
+            itemToBuy = itemId;
+            const item = catalog.find(i => i.id === itemId);
+            const qty = cart[itemId];
+            const totalPrice = qty * item.price;
+            const currencyStr = item.currency === 'rub' ? '₽' : 'монет';
+
+            document.getElementById('confirm-text').innerHTML = `
+                Вы собираетесь купить <b style="color:var(--accent)">${item.name}</b> в количестве <b>${qty} шт.</b>.<br><br>
+                Итоговая стоимость: <b>${totalPrice} ${currencyStr}</b>.<br><br>
+                Ваш игровой ник: <b style="color:var(--accent)">${currentUser.gameNick}</b>
+            `;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        async function executeBuy() {
+            if (!itemToBuy) return;
+            const qty = cart[itemToBuy];
+            const item = catalog.find(i => i.id === itemToBuy);
+            const res = await fetch('/api/order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ itemId: itemToBuy, qty: qty, gameNick: currentUser.gameNick, currency: item.currency }) });
+            const data = await res.json();
+            document.getElementById('confirmModal').style.display = 'none';
+            
+            if (res.ok) {
+                showToast(data.message, 'success');
+                cart[itemToBuy] = 1;
+                const invRes = await fetch('/api/inventory');
+                inventory = await invRes.json();
+                renderProducts();
+            } else { showToast(data.message, 'error'); }
+        }
+
+        function openProfileModal() { document.getElementById('profileModal').style.display = 'flex'; }
+        function uploadAvatar(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('profile-avatar').innerHTML = `<img src="${event.target.result}">`;
+                currentUser.tempAvatar = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        async function saveProfile() {
+            const res = await fetch('/api/profile/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ gameNick: document.getElementById('profile-nick').value, avatar: currentUser.tempAvatar || currentUser.avatar }) });
+            if (res.ok) { showToast('Профиль обновлен!', 'success'); setTimeout(() => window.location.reload(), 1000); }
+        }
+        async function changePassword() {
+            const res = await fetch('/api/profile/password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ oldPass: document.getElementById('old-pass').value, newPass: document.getElementById('new-pass').value }) });
+            const data = await res.json();
+            if (res.ok) { showToast(data.message, 'success'); document.getElementById('old-pass').value = ''; document.getElementById('new-pass').value = ''; } else { showToast(data.message, 'error'); }
+        }
+
+        async function openOrdersModal() { 
+            document.getElementById('ordersModal').style.display = 'flex'; 
+            loadOrders();
+        }
+
+        async function loadOrders() {
+            const res = await fetch('/api/orders'); 
+            const list = document.getElementById('orders-list');
+            if (res.ok) {
+                const orders = await res.json();
+                if (orders.length === 0) { list.innerHTML = '<div style="color: var(--text-muted); text-align: center;">У вас пока нет заказов.</div>'; } 
+                else {
+                    list.innerHTML = orders.reverse().map(o => {
+                        const product = catalog.find(c => c.id === o.itemId);
+                        const productName = product ? product.name : o.itemId;
+                        
+                        let statusHtml = '';
+                        let btnHtml = '';
+                        
+                        if (o.status === 'pending') {
+                            statusHtml = `<span style="color: #ffb703">Ожидает выдачи</span>`;
+                            btnHtml = `
+                                <button class="auth-btn cancel-order" style="font-size: 12px; padding: 8px;" onclick="cancelOrder('${o.id}')">Отменить заказ</button>
+                            `;
+                        } else if (o.status === 'delivered') {
+                            statusHtml = `<span style="color: #00d2ff">Товар выдан (проверьте инвентарь)</span>`;
+                            btnHtml = `
+                                <button class="btn-confirm-receipt" onclick="confirmReceipt('${o.id}')">Подтвердить получение</button>
+                                <button class="auth-btn dispute" style="font-size: 12px; padding: 8px;" onclick="disputeOrder('${o.id}')">Товар не был получен</button>
+                            `;
+                        } else if (o.status === 'dispute') {
+                            statusHtml = `<span style="color: #ff4d4d">Спор (товар не получен)</span>`;
+                            btnHtml = `
+                                <button class="btn-confirm-receipt resolve" onclick="confirmReceipt('${o.id}')">Проблема решена (товар получен)</button>
+                                <a href="https://t.me/Kusik155" target="_blank" class="auth-btn" style="font-size: 12px; padding: 8px; background: #0088cc; margin-bottom: 5px;">Написать владельцу в TG</a>
+                                <button class="auth-btn dispute" style="font-size: 12px; padding: 8px; margin-bottom: 5px;" onclick="openChatModal('support')">Написать в техподдержку</button>
+                                <button class="auth-btn cancel-order" style="font-size: 12px; padding: 8px;" onclick="cancelOrder('${o.id}')">Отменить заказ</button>
+                            `;
+                        } else if (o.status === 'cancelled') {
+                            statusHtml = `<span style="color: #ff4d4d">Отменен</span>`;
+                        } else {
+                            statusHtml = `<span style="color: #00ff88">Завершен</span>`;
+                            if (!o.reviewed) {
+                                btnHtml = `<button class="auth-btn" style="font-size: 12px; padding: 8px; background: #ffb703; color: #000;" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>`;
+                            } else {
+                                btnHtml = `
+                                    <span style="font-size: 12px; color: #00ff88; display:block; margin-bottom: 5px; text-align: center;">Отзыв оставлен</span>
+                                    <button class="auth-btn" style="font-size: 12px; padding: 8px; background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);" onclick="openChatModal('support')">Вопросы? Поддержка</button>
+                                `;
+                            }
+                        }
+
+                        return `
+                        <div class="order-item">
+                            <span class="order-date">${o.date || 'Дата не указана'}</span>
+                            <div class="order-info">
+                                Товар: <span>${productName}</span><br>
+                                Кол-во: <span>${o.qty}</span><br>
+                                Статус: ${statusHtml}
+                            </div>
+                            ${btnHtml}
+                        </div>
+                    `}).join('');
+                }
+            }
+        }
+
+        async function confirmReceipt(orderId) {
+            if (!confirm('Вы точно получили товар в игре? Это действие нельзя отменить.')) return;
+            const res = await fetch('/api/order/confirm-receipt', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId }) });
+            if (res.ok) {
+                showToast('Спасибо! Заказ завершен.', 'success');
+                loadOrders(); 
+                setTimeout(() => openReviewModal(orderId), 500);
+            }
+        }
+
+        async function disputeOrder(orderId) {
+            if (!confirm('Вы уверены, что не получили товар? Заказ будет помечен как спорный.')) return;
+            const res = await fetch('/api/order/dispute', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId }) });
+            if (res.ok) {
+                document.getElementById('disputeModal').style.display = 'flex';
+                loadOrders();
+            }
+        }
+
+        async function cancelOrder(orderId) {
+            if (!confirm('Вы уверены, что хотите отменить заказ? Товар вернется на склад, а продавец получит уведомление.')) return;
+            const res = await fetch('/api/order/cancel', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId }) });
+            if (res.ok) {
+                showToast('Заказ отменен. Продавец уведомлен.', 'success');
+                loadOrders();
+            }
+        }
+
+        function openReviewModal(orderId) {
+            reviewingOrderId = orderId;
+            currentRating = 5;
+            updateStars();
+            document.getElementById('review-text').value = '';
+            document.getElementById('reviewModal').style.display = 'flex';
+        }
+
+        function setRating(rating) {
+            currentRating = rating;
+            updateStars();
+        }
+
+        function updateStars() {
+            for (let i = 1; i <= 5; i++) {
+                const star = document.getElementById(`star${i}`);
+                if (i <= currentRating) { star.innerText = '★'; star.style.color = '#ffb703'; } 
+                else { star.innerText = '☆'; star.style.color = '#555'; }
+            }
+        }
+
+        async function submitReview() {
+            const text = document.getElementById('review-text').value.trim();
+            const res = await fetch('/api/reviews/add', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ orderId: reviewingOrderId, rating: currentRating, text: text })
+            });
+            if (res.ok) {
+                document.getElementById('reviewModal').style.display = 'none';
+                showToast('Спасибо за ваш отзыв!', 'success');
+                loadOrders();
+                loadPublicReviews();
+                if(document.getElementById('myReviewsModal').style.display === 'flex') openMyReviewsModal();
+            }
+        }
+
+        function openChatModal(mode) {
+            currentChatMode = mode;
+            if (mode === 'seller') {
+                document.getElementById('chat-title').innerText = '💬 Чат с продавцом (KusKusik15)';
+                document.getElementById('chat-desc').innerHTML = 'Договоритесь о времени. Или ТГ: <b>@Kusik155</b>';
+            } else {
+                document.getElementById('chat-title').innerText = '🆘 Поддержка';
+                document.getElementById('chat-desc').innerText = 'Возникли проблемы? Напишите сюда.';
+            }
+            document.getElementById('chatModal').style.display = 'flex';
+            loadChat();
+        }
+
+        async function loadChat() {
+            const res = await fetch('/api/chat');
+            if (res.ok) {
+                const msgs = await res.json();
+                const box = document.getElementById('chat-box');
+                box.innerHTML = '';
+                const filtered = msgs.filter(m => m.type === currentChatMode);
+                filtered.forEach(m => { box.innerHTML += `<div class="msg ${m.sender}">${m.text}</div>`; });
+                box.scrollTop = box.scrollHeight;
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim(); if (!text) return;
+            input.value = '';
+            await fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text, type: currentChatMode }) });
+            loadChat();
+            setTimeout(loadChat, 1500); 
+        }
+    </script>
+</body>
+</html>

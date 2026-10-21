@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | Cube Shop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #111; --panel: #1e1e1e; --text: #eee; --accent: #ff4d4d; --border: #333; --green: #28a745; --blue: #00d2ff;}
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+        
+        .login-box { max-width: 400px; margin: 100px auto; background: var(--panel); padding: 30px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .login-box h2 { color: var(--accent); margin-bottom: 20px; }
+        
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 5px; margin-bottom: 15px; outline: none; }
+        input:focus { border-color: var(--accent); }
+        button { background: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        
+        #admin-panel { display: none; max-width: 1400px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .header h1 { color: var(--accent); font-size: 24px; }
+        .logout-btn { background: transparent; border: 1px solid var(--text); width: auto; padding: 8px 15px; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+        .panel h3 { margin-bottom: 15px; color: #aaa; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+
+        .inv-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #000; padding: 10px; border-radius: 5px;}
+        .inv-row input { width: 80px; margin-bottom: 0; text-align: center; }
+
+        .order-item { background: #000; padding: 15px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center;}
+        .order-info { flex-grow: 1; }
+        .btn-complete { background: var(--green); width: auto; padding: 8px 15px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;}
+        .status-badge { font-size: 12px; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 5px;}
+        .status-pending { background: rgba(255, 183, 3, 0.2); color: #ffb703; }
+        .status-delivered { background: rgba(0, 210, 255, 0.2); color: #00d2ff; }
+        .status-completed { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .status-dispute { background: rgba(255, 77, 77, 0.2); color: #ff4d4d; }
+        
+        .chat-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+        .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px;}
+        .chat-tab.active { background: var(--blue); color: #000; border-color: var(--blue); font-weight: bold;}
+        .chat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 15px; height: 400px; }
+        .user-list { background: #000; border-radius: 5px; overflow-y: auto; border: 1px solid var(--border); }
+        .user-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .user-item:hover, .user-item.active { background: #222; color: var(--blue); }
+        .chat-area { display: flex; flex-direction: column; background: #000; border-radius: 5px; border: 1px solid var(--border); padding: 15px; }
+        .messages { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .msg { padding: 10px; border-radius: 5px; max-width: 80%; font-size: 14px; }
+        .msg.user { background: #333; align-self: flex-start; }
+        .msg.admin { background: var(--blue); color: #000; align-self: flex-end; }
+        
+        .pass-wrapper { position: relative; margin-bottom: 15px; }
+        .pass-wrapper input { margin-bottom: 0; padding-right: 40px; }
+        .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div class="login-box" id="login-box">
+        <h2>Вход в Админку</h2>
+        <div class="pass-wrapper">
+            <input type="password" id="pass-input" placeholder="Пароль (admin)" onkeypress="if(event.key === 'Enter') login()">
+            <span onclick="togglePassword()" class="eye-icon" id="eye-icon">👁️</span>
+        </div>
+        <button onclick="login()">Войти</button>
+    </div>
+
+    <div id="admin-panel">
+        <div class="header">
+            <h1>🚨 Админ Панель</h1>
+            <button class="logout-btn" onclick="logout()">Выйти</button>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h3>Управление товарами (Наличие)</h3>
+                <div id="inventory-list"></div>
+                <button onclick="saveInventory()" style="margin-top: 15px;">Сохранить инвентарь</button>
+            </div>
+
+            <div class="panel">
+                <h3>Заказы</h3>
+                <div id="orders-list" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top: 20px;">
+            <h3>Чаты</h3>
+            <div class="chat-tabs">
+                <button class="chat-tab active" id="tab-seller" onclick="switchChatTab('seller')">📦 Чат с клиентами</button>
+                <button class="chat-tab" id="tab-support" onclick="switchChatTab('support')">🆘 Поддержка</button>
+            </div>
+            
+            <div class="chat-layout">
+                <div class="user-list" id="chat-users"></div>
+                <div class="chat-area">
+                    <div class="messages" id="chat-messages">
+                        <div style="color: #666; text-align: center; margin-top: 50px;">Выберите пользователя слева</div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="admin-reply-input" placeholder="Ответ клиенту..." onkeypress="if(event.key === 'Enter') sendReply()">
+                        <button onclick="sendReply()" style="width: 100px;">Отправить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const itemNames = {
+            'damass': 'Дамасс', // Исправил
+            'copper': 'Медный нагрудник',
+            'cobble': 'Стак Булыжника',
+            'vip': 'VIP Статус'
+        };
+
+        let adminData = null;
+        let currentChatUser = null;
+        let currentChatType = 'seller'; 
+        let isUpdating = false;
+
+        function togglePassword() {
+            const input = document.getElementById('pass-input');
+            const icon = document.getElementById('eye-icon');
+            if (input.type === 'password') { input.type = 'text'; icon.style.color = '#ff4d4d'; } 
+            else { input.type = 'password'; icon.style.color = '#888'; }
+        }
+
+        window.onload = async () => {
+            const res = await fetch('/api/admin/check');
+            const data = await res.json();
+            if (data.isAdmin) {
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                loadData();
+            }
+        };
+
+        async function login() {
+            const pass = document.getElementById('pass-input').value;
+            const res = await fetch('/api/admin/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ password: pass }) });
+            if (res.ok) {
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                loadData();
+            } else { alert('Неверный пароль!'); }
+        }
+
+        async function logout() { await fetch('/api/admin/logout', { method: 'POST' }); window.location.reload(); }
+
+        async function loadData() {
+            if (isUpdating) return;
+            isUpdating = true;
+            try {
+                const res = await fetch('/api/admin/data');
+                if (res.ok) {
+                    adminData = await res.json();
+                    renderInventory();
+                    renderOrders();
+                    renderChatUsers();
+                    if (currentChatUser) openChat(currentChatUser);
+                }
+            } catch (e) { console.error(e); } 
+            finally { isUpdating = false; setTimeout(loadData, 5000); }
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('inventory-list');
+            list.innerHTML = '';
+            for (const [key, val] of Object.entries(adminData.inventory)) {
+                const displayName = itemNames[key] || key.toUpperCase();
+                list.innerHTML += `<div class="inv-row"><span>${displayName}</span><input type="number" id="inv-${key}" value="${val}"></div>`;
+            }
+        }
+
+        async function saveInventory() {
+            let newInv = {};
+            for (const key of Object.keys(adminData.inventory)) {
+                newInv[key] = parseInt(document.getElementById(`inv-${key}`).value) || 0;
+            }
+            const res = await fetch('/api/admin/inventory', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newInv) });
+            if(res.ok) alert('Инвентарь обновлен!');
+        }
+
+        function renderOrders() {
+            const list = document.getElementById('orders-list');
+            if (!adminData.orders || adminData.orders.length === 0) {
+                list.innerHTML = '<div style="color:#666">Заказов нет</div>';
+                return;
+            }
+
+            const recentOrders = [...adminData.orders].reverse().slice(0, 20);
+            let html = '';
+
+            recentOrders.forEach(o => {
+                const user = adminData.users.find(u => u.id === o.userId);
+                const isPending = o.status === 'pending';
+                const isDelivered = o.status === 'delivered';
+                const isDispute = o.status === 'dispute';
+                const productName = itemNames[o.itemId] || o.itemId;
+                
+                let btnHtml = '';
+                if (isPending) {
+                    btnHtml = `<button class="btn-complete" onclick="completeOrder('${o.id}', this)">Выдать</button>`;
+                }
+
+                let statusHtml = '';
+                if (isPending) statusHtml = `<span class="status-badge status-pending">Ожидает выдачи</span>`;
+                if (isDelivered) statusHtml = `<span class="status-badge status-delivered">Выдан (ждет подтв.)</span>`;
+                if (isDispute) statusHtml = `<span class="status-badge status-dispute">СПОР (Свяжитесь с игроком!)</span>`;
+                if (o.status === 'completed') statusHtml = `<span class="status-badge status-completed">Завершен</span>`;
+
+                html += `
+                    <div class="order-item" style="${isPending || isDispute ? '' : 'opacity: 0.8; border-left-color: var(--border);'} ${isDispute ? 'border-left-color: #ff4d4d;' : ''}">
+                        <div class="order-info">
+                            <b>${user ? user.name : 'Неизвестный'}</b> купил <b>${productName}</b> (x${o.qty})<br>
+                            Ник в игре: <b style="color: #fff;">${o.buyerNick}</b><br>
+                            ${statusHtml}
+                        </div>
+                        ${btnHtml}
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        async function completeOrder(orderId, btnElement) {
+            if (!confirm('Вы уверены, что выдали товар этому игроку?')) return;
+            btnElement.disabled = true;
+            btnElement.innerText = '...';
+
+            try {
+                const res = await fetch('/api/admin/complete-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId: orderId }) });
+                if (res.ok) { await loadData(); } 
+                else { alert('Ошибка сервера'); btnElement.disabled = false; btnElement.innerText = 'Выдать'; }
+            } catch(e) { alert('Ошибка сети'); btnElement.disabled = false; btnElement.innerText = 'Выдать'; }
+        }
+
+        function switchChatTab(type) {
+            currentChatType = type;
+            document.getElementById('tab-seller').classList.remove('active');
+            document.getElementById('tab-support').classList.remove('active');
+            document.getElementById('tab-' + type).classList.add('active');
+            
+            currentChatUser = null; 
+            document.getElementById('chat-messages').innerHTML = '<div style="color: #666; text-align: center; margin-top: 50px;">Выберите пользователя слева</div>';
+            renderChatUsers();
+        }
+
+        function renderChatUsers() {
+            const list = document.getElementById('chat-users');
+            list.innerHTML = '';
+            
+            const usersWithMsgs = [...new Set(adminData.messages.filter(m => m.type === currentChatType).map(m => m.userId))];
+            
+            if (usersWithMsgs.length === 0) {
+                list.innerHTML = '<div style="padding: 15px; color: #666;">Нет сообщений</div>';
+                return;
+            }
+
+            usersWithMsgs.forEach(userId => {
+                const user = adminData.users.find(u => u.id === userId);
+                if (user) {
+                    const div = document.createElement('div');
+                    div.className = `user-item ${currentChatUser === userId ? 'active' : ''}`;
+                    div.innerText = user.name;
+                    div.onclick = () => openChat(userId);
+                    list.appendChild(div);
+                }
+            });
+        }
+
+        function openChat(userId) {
+            currentChatUser = userId;
+            renderChatUsers();
+            
+            const msgBox = document.getElementById('chat-messages');
+            msgBox.innerHTML = '';
+            const userMsgs = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType);
+            userMsgs.forEach(m => { msgBox.innerHTML += `<div class="msg ${m.sender}">${m.text}</div>`; });
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+
+        async function sendReply() {
+            if (!currentChatUser) return alert('Выберите пользователя слева!');
+            const input = document.getElementById('admin-reply-input');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            await fetch('/api/admin/reply', { 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ userId: currentChatUser, text: text, type: currentChatType }) 
+            });
+            input.value = '';
+            loadData(); 
+        }
+    </script>
+</body>
+</html>
