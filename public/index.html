@@ -41,7 +41,6 @@
 
         .shop-column { width: 100%; }
         
-        /* БАННЕР СЕРВЕРА */
         .server-banner { background: linear-gradient(90deg, #ff0000, #cc0000); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; font-weight: 800; font-size: 18px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(255,0,0,0.3); letter-spacing: 1px;}
 
         .schedule-banner { background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 14px; }
@@ -133,7 +132,12 @@
         .order-item { background: #061225; border: 1px solid rgba(0,210,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; text-align: left; display: flex; flex-direction: column; gap: 10px;}
         .order-info span { color: var(--accent); font-weight: bold;}
         .order-date { font-size: 11px; color: #555; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; padding-bottom: 5px;}
-        .btn-confirm-receipt { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        
+        .btn-confirm-receipt { background: #28a745; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-dispute { background: #ff4d4d; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-cancel-order { background: #ffb703; color: black; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-review { background: #ffb703; color: black; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-tg { background: #0088cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px; text-decoration: none; display: block; text-align: center; box-sizing: border-box;}
 
         @media (max-width: 900px) {
             .main-container { grid-template-columns: 1fr; }
@@ -229,7 +233,6 @@
         <div class="main-container">
             
             <div class="shop-column">
-                <!-- БАННЕР СЕРВЕРА -->
                 <div class="server-banner">
                     ⚠️ Магазин исключительно для сервера #3 АНАРХИЯ ПвП ⚠️
                 </div>
@@ -266,9 +269,7 @@
 
             <div class="news-column">
                 <div class="news-title-main">📰 Новости и обновления</div>
-                <div id="news-container">
-                    <!-- Новости подгрузятся сюда -->
-                </div>
+                <div id="news-container"></div>
             </div>
 
         </div>
@@ -366,6 +367,7 @@
     <div class="modal-overlay" id="disputeModal">
         <div class="modal">
             <h3 style="color: #ff4d4d;">Товар не получен?</h3>
+            <p style="text-align: center; margin-bottom: 20px; font-size: 14px;">Если вы не получили товар, хотя статус изменился, свяжитесь с владельцем или поддержкой.</p>
             <a href="https://t.me/Kusik155" target="_blank" class="auth-btn" style="background: #0088cc; margin-bottom: 10px;">Написать в Telegram @Kusik155</a>
             <button class="auth-btn" style="background: #ff4d4d; margin-bottom: 10px;" onclick="document.getElementById('disputeModal').style.display = 'none'; openChatModal('support');">Написать в поддержку</button>
             <button class="auth-btn cancel" onclick="document.getElementById('disputeModal').style.display = 'none'">Закрыть</button>
@@ -373,18 +375,21 @@
     </div>
 
     <script>
+        // Каталог - это ТОЛЬКО статичные данные (названия, картинки). 
+        // Цены и количество теперь приходят с сервера!
         const catalog = [
-            { id: 'damass', name: 'Дамасский слиток', category: 'damass', price: 30, currency: 'coins', img: 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.20.1/assets/minecraft/textures/item/netherite_ingot.png' },
-            { id: 'copper', name: 'Медный нагрудник', category: 'chestplate', price: 12, currency: 'coins', img: 'https://minecraft.wiki/images/Copper_Chestplate_JE1_BE1.png' },
-            { id: 'cobble', name: 'Стак Булыжника', category: 'materials', price: 15, currency: 'coins', img: 'https://minecraft.wiki/images/Cobblestone_JE5_BE3.png' },
-            { id: 'sword', name: 'Железный меч', category: 'sword', price: 50, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Sword_JE2_BE2.png' },
-            { id: 'axe', name: 'Железный топор', category: 'axe', price: 45, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Axe_JE2_BE2.png' },
-            { id: 'pickaxe', name: 'Железная кирка', category: 'pickaxe', price: 40, currency: 'coins', img: 'https://minecraft.wiki/images/Iron_Pickaxe_JE2_BE2.png' },
-            { id: 'fishing_rod', name: 'Удочка', category: 'fishing_rod', price: 20, currency: 'coins', img: 'https://minecraft.wiki/images/Fishing_Rod_JE2_BE2.png' }
+            { id: 'damass', name: 'Дамасский слиток', category: 'damass', img: 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.20.1/assets/minecraft/textures/item/netherite_ingot.png' },
+            { id: 'copper', name: 'Медный нагрудник', category: 'chestplate', img: 'https://minecraft.wiki/images/Copper_Chestplate_JE1_BE1.png' },
+            { id: 'cobble', name: 'Стак Булыжника', category: 'materials', img: 'https://minecraft.wiki/images/Cobblestone_JE5_BE3.png' },
+            { id: 'sword', name: 'Железный меч', category: 'sword', img: 'https://minecraft.wiki/images/Iron_Sword_JE2_BE2.png' },
+            { id: 'axe', name: 'Железный топор', category: 'axe', img: 'https://minecraft.wiki/images/Iron_Axe_JE2_BE2.png' },
+            { id: 'pickaxe', name: 'Железная кирка', category: 'pickaxe', img: 'https://minecraft.wiki/images/Iron_Pickaxe_JE2_BE2.png' },
+            { id: 'fishing_rod', name: 'Удочка', category: 'fishing_rod', img: 'https://minecraft.wiki/images/Fishing_Rod_JE2_BE2.png' }
         ];
 
         let currentUser = null;
         let inventory = {};
+        let prices = {}; // Сюда будут загружаться цены
         let currentCategory = 'all';
         let cart = { damass: 1, copper: 1, cobble: 1, sword: 1, axe: 1, pickaxe: 1, fishing_rod: 1 };
         let itemToBuy = null;
@@ -471,7 +476,10 @@
             document.getElementById('profile-nick').value = currentUser.gameNick || '';
 
             const invRes = await fetch('/api/inventory');
-            inventory = await invRes.json();
+            const invData = await invRes.json();
+            inventory = invData.inventory;
+            prices = invData.prices; // Сохраняем цены
+
             renderProducts();
             loadPublicReviews();
             loadNews();
@@ -510,10 +518,11 @@
 
             filtered.forEach(item => {
                 const stock = inventory[item.id] || 0;
+                const price = prices[item.id] || 0; // ЦЕНА ИЗ БАЗЫ
                 const isOut = stock <= 0;
-                const currencyStr = item.currency === 'rub' ? '₽' : 'монет';
+                const currencyStr = 'монет'; // Пока только монеты
                 const qty = cart[item.id] || 1;
-                const totalPrice = qty * item.price;
+                const totalPrice = qty * price;
 
                 let stockColor = "#00ff88"; 
                 if (stock > 0 && stock <= 5) stockColor = "#ffb703"; 
@@ -606,26 +615,27 @@
 
         function updateItemPrice(itemId) {
             const qty = cart[itemId];
-            const item = catalog.find(i => i.id === itemId);
+            const price = prices[itemId] || 0;
             document.getElementById(`qty-${itemId}`).value = qty;
-            document.getElementById(`price-${itemId}`).innerHTML = `${qty * item.price} <span>${item.currency === 'rub' ? '₽' : 'монет'}</span>`;
+            document.getElementById(`price-${itemId}`).innerHTML = `${qty * price} <span>монет</span>`;
         }
 
         function openConfirm(itemId) {
             if (!currentUser.gameNick) { showToast('Укажите ник в профиле!', 'error'); return; }
             itemToBuy = itemId;
             const item = catalog.find(i => i.id === itemId);
+            const price = prices[itemId] || 0;
             const qty = cart[itemId];
-            document.getElementById('confirm-text').innerHTML = `Вы покупаете <b>${item.name}</b> (${qty} шт.) за <b>${qty * item.price} ${item.currency === 'rub' ? '₽' : 'монет'}</b>.<br><br>Ваш ник: <b>${currentUser.gameNick}</b>`;
+            document.getElementById('confirm-text').innerHTML = `Вы покупаете <b>${item.name}</b> (${qty} шт.) за <b>${qty * price} монет</b>.<br><br>Ваш ник: <b>${currentUser.gameNick}</b>`;
             document.getElementById('confirmModal').style.display = 'flex';
         }
 
         async function executeBuy() {
             if (!itemToBuy) return;
-            const res = await fetch('/api/order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ itemId: itemToBuy, qty: cart[itemToBuy], gameNick: currentUser.gameNick, currency: catalog.find(i=>i.id===itemToBuy).currency }) });
+            const res = await fetch('/api/order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ itemId: itemToBuy, qty: cart[itemToBuy], gameNick: currentUser.gameNick, currency: 'coins' }) });
             const data = await res.json();
             document.getElementById('confirmModal').style.display = 'none';
-            if (res.ok) { showToast('Заказ создан!', 'success'); cart[itemToBuy] = 1; const invRes = await fetch('/api/inventory'); inventory = await invRes.json(); renderProducts(); } else { showToast(data.message, 'error'); }
+            if (res.ok) { showToast('Заказ создан!', 'success'); cart[itemToBuy] = 1; const invRes = await fetch('/api/inventory'); const invData = await invRes.json(); inventory = invData.inventory; prices = invData.prices; renderProducts(); } else { showToast(data.message, 'error'); }
         }
 
         function openProfileModal() { document.getElementById('profileModal').style.display = 'flex'; }
@@ -646,21 +656,61 @@
         }
 
         async function openOrdersModal() { document.getElementById('ordersModal').style.display = 'flex'; loadOrders(); }
+        
         async function loadOrders() {
             const res = await fetch('/api/orders'); const list = document.getElementById('orders-list');
             if (res.ok) {
                 const orders = await res.json();
                 if (orders.length === 0) { list.innerHTML = '<div style="text-align:center;">Нет заказов.</div>'; return; }
+                
                 list.innerHTML = orders.reverse().map(o => {
                     const product = catalog.find(c => c.id === o.itemId);
-                    let statusHtml = '', btnHtml = '';
-                    if (o.status === 'pending') { statusHtml = `<span style="color: #ffb703">Ожидает</span>`; btnHtml = `<button class="auth-btn cancel-order" style="font-size: 12px; padding: 8px;" onclick="cancelOrder('${o.id}')">Отменить</button>`; } 
-                    else if (o.status === 'delivered') { statusHtml = `<span style="color: #00d2ff">Выдан</span>`; btnHtml = `<button class="btn-confirm-receipt" onclick="confirmReceipt('${o.id}')">Подтвердить</button><button class="auth-btn dispute" style="font-size: 12px; padding: 8px;" onclick="disputeOrder('${o.id}')">Не получен</button>`; } 
-                    else if (o.status === 'dispute') { statusHtml = `<span style="color: #ff4d4d">Спор</span>`; btnHtml = `<button class="btn-confirm-receipt resolve" onclick="confirmReceipt('${o.id}')">Решено</button><a href="https://t.me/Kusik155" target="_blank" class="auth-btn" style="font-size: 12px; padding: 8px; background: #0088cc;">TG</a>`; } 
-                    else if (o.status === 'cancelled') { statusHtml = `<span style="color: #ff4d4d">Отменен</span>`; } 
-                    else { statusHtml = `<span style="color: #00ff88">Завершен</span>`; if (!o.reviewed) btnHtml = `<button class="auth-btn" style="font-size: 12px; padding: 8px; background: #ffb703; color: #000;" onclick="openReviewModal('${o.id}')">Отзыв</button>`; else btnHtml = `<span style="font-size: 12px; color: #00ff88;">✅ Оставлен</span>`; }
-                    return `<div class="order-item"><span class="order-date">${o.date}</span><div class="order-info">Товар: <span>${product?product.name:o.itemId}</span><br>Кол-во: <span>${o.qty}</span><br>Статус: ${statusHtml}</div>${btnHtml}</div>`;
-                }).join('');
+                    const productName = product ? product.name : o.itemId;
+                    let statusHtml = '';
+                    let btnHtml = '';
+                    
+                    if (o.status === 'pending') {
+                        statusHtml = `<span style="color: #ffb703">Ожидает выдачи</span>`;
+                        btnHtml = `<button class="btn-cancel-order" onclick="cancelOrder('${o.id}')">Отменить заказ</button>`;
+                    } 
+                    else if (o.status === 'delivered') {
+                        statusHtml = `<span style="color: #00d2ff">Товар выдан (проверьте инвентарь)</span>`;
+                        btnHtml = `
+                            <button class="btn-confirm-receipt" onclick="confirmReceipt('${o.id}')">Подтвердить получение</button>
+                            <button class="btn-dispute" onclick="disputeOrder('${o.id}')">Товар не был получен</button>
+                        `;
+                    } 
+                    else if (o.status === 'dispute') {
+                        statusHtml = `<span style="color: #ff4d4d">Спор (товар не получен)</span>`;
+                        btnHtml = `
+                            <button class="btn-confirm-receipt resolve" onclick="confirmReceipt('${o.id}')">Проблема решена (товар получен)</button>
+                            <a href="https://t.me/Kusik155" target="_blank" class="btn-tg">Написать владельцу в TG</a>
+                            <button class="btn-dispute" onclick="openChatModal('support')">Написать в техподдержку</button>
+                        `;
+                    } 
+                    else if (o.status === 'cancelled') {
+                        statusHtml = `<span style="color: #ff4d4d">Отменен</span>`;
+                    } 
+                    else {
+                        statusHtml = `<span style="color: #00ff88">Завершен</span>`;
+                        if (!o.reviewed) {
+                            btnHtml = `<button class="btn-review" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>`;
+                        } else {
+                            btnHtml = `<span style="font-size: 12px; color: #00ff88; display:block; text-align: center;">✅ Отзыв оставлен</span>`;
+                        }
+                    }
+
+                    return `
+                    <div class="order-item">
+                        <span class="order-date">${o.date || 'Дата не указана'}</span>
+                        <div class="order-info">
+                            Товар: <span>${productName}</span><br>
+                            Кол-во: <span>${o.qty}</span><br>
+                            Статус: ${statusHtml}
+                        </div>
+                        ${btnHtml}
+                    </div>
+                `}).join('');
             }
         }
 
