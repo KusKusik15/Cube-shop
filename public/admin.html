@@ -10,6 +10,15 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
         body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
         
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
         .login-box { max-width: 400px; margin: 100px auto; background: var(--panel); padding: 30px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
         .login-box h2 { color: var(--accent); margin-bottom: 20px; }
         
@@ -135,6 +144,7 @@
     </div>
 
     <script>
+        // Словарь для перевода ID в красивые названия
         const itemDatabase = {
             'Дамасс': { 'damass': 'Дамасский слиток' },
             'Сталь': { 'steel': 'Стальной слиток' },
@@ -152,6 +162,14 @@
             'Сырьё': { 'cobble': 'Стак Булыжника', 'wood': 'Древесина' },
             'Интерьер': { 'table': 'Стол', 'chair': 'Стул' }
         };
+
+        // Функция для получения названия по ID
+        function getItemName(id) {
+            for (const category in itemDatabase) {
+                if (itemDatabase[category][id]) return itemDatabase[category][id];
+            }
+            return id; // Если не нашли, возвращаем сам ID
+        }
 
         let adminData = null, currentChatUser = null, currentChatType = 'seller', isUpdating = false;
 
@@ -291,17 +309,28 @@
         function renderOrders() {
             const list = document.getElementById('orders-list');
             if (!adminData.orders || adminData.orders.length === 0) { list.innerHTML = '<div style="color:#666">Нет заказов</div>'; return; }
+            
             const recentOrders = [...adminData.orders].reverse().slice(0, 20);
             let html = '';
+            
             recentOrders.forEach(o => {
                 const user = adminData.users.find(u => u.id === o.userId);
                 const displayNick = user ? user.name : 'Неизвестный';
                 const isPending = o.status === 'pending';
+                const productName = getItemName(o.itemId); // ИСПОЛЬЗУЕМ КРАСИВОЕ НАЗВАНИЕ
+                
                 let btnHtml = isPending ? `<button class="btn-complete" onclick="completeOrder('${o.id}', this)">Выдать</button>` : '';
-                let statusHtml = isPending ? `<span style="color:#ffb703">Ожидает</span>` : (o.status === 'delivered' ? `<span style="color:#00d2ff">Выдан</span>` : (o.status === 'completed' ? `<span style="color:#00ff88">Завершен</span>` : `<span style="color:#ff4d4d">Спор/Отмена</span>`));
+                
+                // РАЗДЕЛЯЕМ СТАТУСЫ
+                let statusHtml = '';
+                if (o.status === 'pending') statusHtml = `<span style="color:#ffb703">Ожидает выдачи</span>`;
+                else if (o.status === 'delivered') statusHtml = `<span style="color:#00d2ff">Выдан</span>`;
+                else if (o.status === 'completed') statusHtml = `<span style="color:#00ff88">Завершен</span>`;
+                else if (o.status === 'dispute') statusHtml = `<span style="color:#ff4d4d">Спор (Товар не получен)</span>`;
+                else if (o.status === 'cancelled') statusHtml = `<span style="color:#888">Отменен</span>`;
 
-                html += `<div class="order-item" style="${isPending ? '' : 'opacity: 0.8;'}">
-                    <div class="order-info"><b>${displayNick}</b> купил <b>${itemDatabase[o.itemId] ? (itemDatabase[o.itemId][o.itemId] || o.itemId) : o.itemId}</b> (x${o.qty})<br>Ник: <b style="color: #fff;">${o.buyerNick}</b><br>${statusHtml}</div>${btnHtml}</div>`;
+                html += `<div class="order-item" style="${isPending ? '' : 'opacity: 0.8;'} ${o.status === 'dispute' ? 'border-left-color: #ff4d4d;' : ''}">
+                    <div class="order-info"><b>${displayNick}</b> купил <b>${productName}</b> (x${o.qty})<br>Ник: <b style="color: #fff;">${o.buyerNick}</b><br>${statusHtml}</div>${btnHtml}</div>`;
             });
             list.innerHTML = html;
         }
