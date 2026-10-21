@@ -43,7 +43,6 @@
         
         .server-banner { background: linear-gradient(90deg, #ff0000, #cc0000); color: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; text-align: center; font-weight: 800; font-size: 18px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(255,0,0,0.3); letter-spacing: 1px;}
 
-        /* НОВЫЙ БЛОК С НИКОМ ПРОДАВЦА */
         .seller-nick-banner { background: rgba(0, 136, 204, 0.15); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 15px; }
         .seller-nick-banner b { color: #00d2ff; font-size: 18px; text-shadow: 0 0 10px rgba(0, 210, 255, 0.4);}
 
@@ -143,6 +142,9 @@
         .btn-review { background: #ffb703; color: black; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
         .btn-tg { background: #0088cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px; text-decoration: none; display: block; text-align: center; box-sizing: border-box;}
 
+        /* Стиль для ссылки на чат в окне подтверждения */
+        .chat-link { color: #00d2ff; text-decoration: underline; cursor: pointer; font-weight: bold; }
+
         @media (max-width: 900px) {
             .main-container { grid-template-columns: 1fr; }
             .news-column { position: static; max-height: none; order: -1; margin-bottom: 20px; }
@@ -241,7 +243,6 @@
                     ⚠️ Магазин исключительно для сервера #3 АНАРХИЯ ПвП ⚠️
                 </div>
 
-                <!-- НОВЫЙ БЛОК С НИКОМ -->
                 <div class="seller-nick-banner">
                     👑 Продавец: <b>KusKusik15</b>
                 </div>
@@ -298,7 +299,7 @@
             <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); text-align: left;">
                 <b>Как получить товар:</b><br>
                 1. Создайте заказ на сайте.<br>
-                2. Напишите продавцу в игре (ник: <b>KusKusik15</b>).<br>
+                2. Напишите продавцу в игре (ник: <b>KusKusik15</b>) или <span class="chat-link" onclick="document.getElementById('confirmModal').style.display = 'none'; openChatModal('seller')">в чате на сайте</span>.<br>
                 3. Продавец пришлет вам запрос на обмен.<br>
                 4. Подтвердите обмен (вы кладете монеты, он кладет товар).
                 <br><br>
