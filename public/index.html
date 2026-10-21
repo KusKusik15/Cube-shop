@@ -286,6 +286,15 @@
         <div class="modal">
             <h3 style="font-size: 24px;">Подтверждение</h3>
             <p style="text-align: center; font-size: 16px; margin-bottom: 20px;" id="confirm-text"></p>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); text-align: left;">
+                <b>Как получить товар:</b><br>
+                1. Создайте заказ на сайте.<br>
+                2. Напишите продавцу в игре (или в чат на сайте).<br>
+                3. Продавец пришлет вам запрос на обмен.<br>
+                4. Подтвердите обмен (вы кладете монеты, он кладет товар).
+                <br><br>
+                <i>Убедитесь, что ваш игровой ник верный. Выдача происходит вручную!</i>
+            </div>
             <div style="display: flex; gap: 10px;">
                 <button class="auth-btn cancel" onclick="document.getElementById('confirmModal').style.display = 'none'">Отмена</button>
                 <button class="auth-btn" onclick="executeBuy()">Подтвердить</button>
@@ -375,8 +384,6 @@
     </div>
 
     <script>
-        // Каталог - это ТОЛЬКО статичные данные (названия, картинки). 
-        // Цены и количество теперь приходят с сервера!
         const catalog = [
             { id: 'damass', name: 'Дамасский слиток', category: 'damass', img: 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.20.1/assets/minecraft/textures/item/netherite_ingot.png' },
             { id: 'copper', name: 'Медный нагрудник', category: 'chestplate', img: 'https://minecraft.wiki/images/Copper_Chestplate_JE1_BE1.png' },
@@ -389,7 +396,7 @@
 
         let currentUser = null;
         let inventory = {};
-        let prices = {}; // Сюда будут загружаться цены
+        let prices = {}; 
         let currentCategory = 'all';
         let cart = { damass: 1, copper: 1, cobble: 1, sword: 1, axe: 1, pickaxe: 1, fishing_rod: 1 };
         let itemToBuy = null;
@@ -478,7 +485,7 @@
             const invRes = await fetch('/api/inventory');
             const invData = await invRes.json();
             inventory = invData.inventory;
-            prices = invData.prices; // Сохраняем цены
+            prices = invData.prices; 
 
             renderProducts();
             loadPublicReviews();
@@ -518,9 +525,9 @@
 
             filtered.forEach(item => {
                 const stock = inventory[item.id] || 0;
-                const price = prices[item.id] || 0; // ЦЕНА ИЗ БАЗЫ
+                const price = prices[item.id] || 0; 
                 const isOut = stock <= 0;
-                const currencyStr = 'монет'; // Пока только монеты
+                const currencyStr = 'монет'; 
                 const qty = cart[item.id] || 1;
                 const totalPrice = qty * price;
 
@@ -626,7 +633,13 @@
             const item = catalog.find(i => i.id === itemId);
             const price = prices[itemId] || 0;
             const qty = cart[itemId];
-            document.getElementById('confirm-text').innerHTML = `Вы покупаете <b>${item.name}</b> (${qty} шт.) за <b>${qty * price} монет</b>.<br><br>Ваш ник: <b>${currentUser.gameNick}</b>`;
+            
+            // ВОЗВРАЩЕНО ПОДРОБНОЕ ОПИСАНИЕ
+            document.getElementById('confirm-text').innerHTML = `
+                Вы собираетесь купить <b style="color:var(--accent)">${item.name}</b> в количестве <b>${qty} шт.</b>.<br><br>
+                Итоговая стоимость: <b>${qty * price} монет</b>.<br><br>
+                Ваш игровой ник: <b style="color:var(--accent)">${currentUser.gameNick}</b>
+            `;
             document.getElementById('confirmModal').style.display = 'flex';
         }
 
