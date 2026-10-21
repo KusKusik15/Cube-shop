@@ -20,9 +20,18 @@ const publicVapidKey = 'ТВОЙ_PUBLIC_KEY';
 const privateVapidKey = 'ТВОЙ_PRIVATE_KEY'; 
 try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, privateVapidKey); } catch(e) {}
 
-// --- БАЗА ---
-const DB_FILE = path.join(__dirname, 'db.json');
+// --- БАЗА (С ПОДДЕРЖКОЙ NETRUN) ---
+const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
+
 let db = { users: [], inventory: { damass: 10, copper: 5, cobble: 10, vip: 3 }, orders: [], messages: [], reviews: [] };
+
+if (process.env.NETRUN) {
+    const dataDir = '/data';
+    if (!fs.existsSync(dataDir)) {
+        try { fs.mkdirSync(dataDir); } catch(e) { console.log("Не удалось создать папку /data"); }
+    }
+}
+
 if (fs.existsSync(DB_FILE)) { 
     try { 
         db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); 
@@ -32,13 +41,19 @@ if (fs.existsSync(DB_FILE)) {
         if (!db.reviews) db.reviews = [];
         if (!db.inventory) db.inventory = { damass: 10, copper: 5, cobble: 10, vip: 3 };
     } catch (e) {} 
-} else { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
-function saveDB() { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
+} else { 
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
+}
+
+function saveDB() { 
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); 
+}
 
 // --- ЯНДЕКС ---
 passport.use(new YandexStrategy({
     clientID: 'c0f552be2f44400b80e933f514c19d0f',
     clientSecret: 'dca12e0b6afe4cef90c4adad79dad527',
+    // ВАЖНО: Когда Netrun даст тебе ссылку, поменяй этот URL на свой (например, https://cube.netrun.io/auth/yandex/callback)
     callbackURL: "http://localhost:3000/auth/yandex/callback"
   },
   function(accessToken, refreshToken, profile, done) {
@@ -246,12 +261,17 @@ app.post('/api/admin/reply', (req, res) => {
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
-// --- ЗАПУСК СЕРВЕРА С КРАСИВЫМИ ССЫЛКАМИ ---
-const PORT = 3000;
+// --- ЗАПУСК СЕРВЕРА ---
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-    console.log('\n=============================================');
-    console.log('🚀 СЕРВЕР УСПЕШНО ЗАПУЩЕН!');
-    console.log(`🛒 Магазин:  http://localhost:${PORT}`);
-    console.log(`🚨 Админка:  http://localhost:${PORT}/admin`);
-    console.log('=============================================\n');
+    if (process.env.NETRUN) {
+        console.log(`\n🚀 СЕРВЕР УСПЕШНО ЗАПУЩЕН НА NETRUN! Порт: ${PORT}\n`);
+    } else {
+        console.log('\n=============================================');
+        console.log('🚀 ЛОКАЛЬНЫЙ СЕРВЕР УСПЕШНО ЗАПУЩЕН!');
+        console.log(`🛒 Магазин:  http://localhost:${PORT}`);
+        console.log(`🚨 Админка:  http://localhost:${PORT}/admin`);
+        console.log('=============================================\n');
+    }
 });
