@@ -54,17 +54,18 @@
         .user-admin-name { font-weight: bold; font-size: 14px; }
         .user-admin-info { font-size: 11px; color: #888;}
         .role-select { width: auto; margin-bottom: 0; padding: 5px; font-size: 12px;}
-        .user-actions { display: flex; gap: 5px; flex-wrap: wrap;}
+        .user-actions { display: flex; gap: 5px; flex-wrap: wrap; align-items: center;}
         .btn-mini { padding: 5px 10px; font-size: 11px; width: auto; }
         .btn-mute { background: #ffb703; color: #000; }
         .btn-ban { background: #ff4d4d; color: #fff; }
         .btn-unban { background: #28a745; color: #fff; }
         .btn-unmute { background: #00d2ff; color: #000; }
 
-        /* Выбор времени мута */
-        .mute-controls { display: flex; gap: 5px; flex-wrap: wrap; align-items: center;}
         .mute-select { width: auto; margin-bottom: 0; padding: 5px; font-size: 12px; flex-grow: 1; min-width: 120px;}
         .mute-custom { width: 60px; margin-bottom: 0; padding: 5px; font-size: 12px; text-align: center;}
+
+        .mute-info { font-size: 11px; color: #ffb703; display: flex; flex-direction: column; gap: 2px;}
+        .ban-info { font-size: 11px; color: #ff4d4d; }
 
         .news-admin-item { background: #000; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 2px solid var(--blue); }
         .news-admin-item.pinned { border-left-color: var(--gold); background: #111a11; }
@@ -75,13 +76,15 @@
         .news-btns button { width: auto; padding: 5px 10px; font-size: 11px;}
 
         .chat-tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;}
-        .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: auto;}
+        .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: auto; position: relative; display: flex; align-items: center; gap: 6px;}
         .chat-tab.active { background: var(--blue); color: #000; border-color: var(--blue); font-weight: bold;}
+        .chat-tab .tab-badge { background: #ff4d4d; color: white; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; display: none; }
         
         .chat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 15px; height: 500px; }
         .user-list { background: #000; border-radius: 5px; overflow-y: auto; border: 1px solid var(--border); }
-        .user-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .user-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px;}
         .user-item:hover, .user-item.active { background: #222; color: var(--blue); }
+        .user-item .user-badge { background: #ff4d4d; color: white; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; display: none;}
         
         .chat-area { display: flex; flex-direction: column; background: #000; border-radius: 5px; border: 1px solid var(--border); padding: 15px; }
         .messages { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
@@ -102,7 +105,7 @@
         .pass-wrapper input { margin-bottom: 0; padding-right: 40px; }
         .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 20px; }
 
-        /* МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ СМЕНЫ РОЛИ */
+        /* МОДАЛЬНЫЕ ОКНА */
         .admin-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.8);
@@ -129,13 +132,15 @@
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
         .admin-modal h3 { color: var(--blue); margin-bottom: 15px; font-size: 22px; }
-        .admin-modal p { color: #ccc; margin-bottom: 25px; font-size: 15px; line-height: 1.5; }
+        .admin-modal p { color: #ccc; margin-bottom: 20px; font-size: 15px; line-height: 1.5; }
         .admin-modal b { color: #fff; }
         .admin-modal .role-highlight { color: var(--gold); font-weight: 800; }
+        .admin-modal textarea { width: 100%; margin-bottom: 15px; }
         .admin-modal-btns { display: flex; gap: 10px; }
         .admin-modal-btns button { flex: 1; padding: 12px; font-size: 14px; }
         .admin-modal-btns .btn-cancel-modal { background: transparent; border: 1px solid #666; color: #aaa; }
         .admin-modal-btns .btn-confirm-modal { background: var(--green); }
+        .admin-modal-btns .btn-confirm-danger { background: var(--accent); }
 
         @media (max-width: 800px) {
             body { padding: 10px; }
@@ -203,9 +208,15 @@
         <div class="panel" style="margin-top: 20px;">
             <h3>Чаты</h3>
             <div class="chat-tabs">
-                <button class="chat-tab active" id="tab-seller" onclick="switchChatTab('seller')">📦 Выдача заказов</button>
-                <button class="chat-tab" id="tab-support" onclick="switchChatTab('support')">🆘 Тех. Поддержка</button>
-                <button class="chat-tab" id="tab-global" onclick="switchChatTab('global')">🗣️ Общий чат</button>
+                <button class="chat-tab active" id="tab-seller" onclick="switchChatTab('seller')">
+                    📦 Выдача заказов <span class="tab-badge" id="tab-badge-seller">0</span>
+                </button>
+                <button class="chat-tab" id="tab-support" onclick="switchChatTab('support')">
+                    🆘 Тех. Поддержка <span class="tab-badge" id="tab-badge-support">0</span>
+                </button>
+                <button class="chat-tab" id="tab-global" onclick="switchChatTab('global')">
+                    🗣️ Общий чат <span class="tab-badge" id="tab-badge-global">0</span>
+                </button>
             </div>
             
             <div class="chat-layout" id="private-chats-layout">
@@ -230,7 +241,7 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА ПОДТВЕРЖДЕНИЯ СМЕНЫ РОЛИ -->
+    <!-- МОДАЛКА СМЕНЫ РОЛИ -->
     <div class="admin-modal-overlay" id="roleConfirmModal">
         <div class="admin-modal">
             <h3>Смена роли</h3>
@@ -238,6 +249,32 @@
             <div class="admin-modal-btns">
                 <button class="btn-cancel-modal" onclick="cancelRoleChange()">Отмена</button>
                 <button class="btn-confirm-modal" onclick="confirmRoleChange()">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА МУТА -->
+    <div class="admin-modal-overlay" id="muteModal">
+        <div class="admin-modal">
+            <h3>🔇 Замутить игрока</h3>
+            <p id="mute-confirm-text"></p>
+            <textarea id="mute-reason-input" rows="2" placeholder="Причина мута (необязательно)"></textarea>
+            <div class="admin-modal-btns">
+                <button class="btn-cancel-modal" onclick="cancelMute()">Отмена</button>
+                <button class="btn-confirm-modal" onclick="confirmMute()">Замутить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА БАНА -->
+    <div class="admin-modal-overlay" id="banModal">
+        <div class="admin-modal">
+            <h3>🚫 Забанить игрока</h3>
+            <p id="ban-confirm-text"></p>
+            <textarea id="ban-reason-input" rows="2" placeholder="Причина бана (необязательно)"></textarea>
+            <div class="admin-modal-btns">
+                <button class="btn-cancel-modal" onclick="cancelBan()">Отмена</button>
+                <button class="btn-confirm-danger" onclick="confirmBan()">Забанить</button>
             </div>
         </div>
     </div>
@@ -274,11 +311,26 @@
 
         let adminData = null, currentChatUser = null, currentChatType = 'seller', isUpdating = false;
         let loadDataTimerId = null;
-        let pendingRoleChange = null; // { userId, newRole, selectEl }
+        let pendingRoleChange = null;
+        let pendingMute = null;
+        let pendingBan = null;
+
+        // Для кружочков: что мы уже видели
+        let seenAdmin = { seller: 0, support: 0, global: 0, users: {} };
+        function loadSeenAdmin() {
+            try {
+                const stored = JSON.parse(localStorage.getItem('cubeShopAdminSeen') || '{}');
+                seenAdmin = { seller: stored.seller || 0, support: stored.support || 0, global: stored.global || 0, users: stored.users || {} };
+            } catch(e) {}
+        }
+        function saveSeenAdmin() {
+            try { localStorage.setItem('cubeShopAdminSeen', JSON.stringify(seenAdmin)); } catch(e) {}
+        }
 
         function togglePassword() { const i = document.getElementById('pass-input'); i.type = i.type === 'password' ? 'text' : 'password'; }
 
         window.onload = async () => {
+            loadSeenAdmin();
             const res = await fetch('/api/admin/check'); const data = await res.json();
             if (data.isAdmin) { document.getElementById('login-box').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; loadData(); }
         };
@@ -310,21 +362,56 @@
                     if (!isFocusInside('inventory-list')) renderInventory();
                     if (!isFocusInside('orders-list')) renderOrders();
                     if (!isFocusInside('news-list') && !isFocusInside('news-title') && !isFocusInside('news-content')) renderNews();
-                    if (!isFocusInside('users-list')) renderUsers();
+                    if (!isFocusInside('users-list') && !document.querySelector('.admin-modal-overlay.show')) renderUsers();
                     
                     if(currentChatType === 'global') {
                         if (!isFocusInside('admin-gc-input')) renderGlobalAdminChat();
                     } else {
-                        if (!isFocusInside('chat-users') && !isFocusInside('chat-messages')) {
+                        if (!isFocusInside('chat-users') && !isFocusInside('chat-messages') && !isFocusInside('admin-reply-input')) {
                             renderChatUsers(); 
                             if (currentChatUser) openChat(currentChatUser);
                         }
                     }
+                    
+                    updateChatBadges();
                 }
             } catch (e) {} finally { 
                 isUpdating = false; 
                 loadDataTimerId = setTimeout(loadData, 5000); 
             }
+        }
+
+        // Кружочки у вкладок чатов
+        function updateChatBadges() {
+            if (!adminData) return;
+            
+            const sellerCount = adminData.messages.filter(m => m.type === 'seller').length;
+            const supportCount = adminData.messages.filter(m => m.type === 'support').length;
+            const globalCount = adminData.globalChat.length;
+            
+            // Обновляем вкладки
+            const sellerUnread = Math.max(0, sellerCount - seenAdmin.seller);
+            const supportUnread = Math.max(0, supportCount - seenAdmin.support);
+            const globalUnread = Math.max(0, globalCount - seenAdmin.global);
+            
+            const bs = document.getElementById('tab-badge-seller');
+            const bp = document.getElementById('tab-badge-support');
+            const bg = document.getElementById('tab-badge-global');
+            
+            if (sellerUnread > 0) { bs.innerText = sellerUnread; bs.style.display = 'inline-block'; } else bs.style.display = 'none';
+            if (supportUnread > 0) { bp.innerText = supportUnread; bp.style.display = 'inline-block'; } else bp.style.display = 'none';
+            if (globalUnread > 0) { bg.innerText = globalUnread; bg.style.display = 'inline-block'; } else bg.style.display = 'none';
+        }
+
+        function markAdminTabSeen(type) {
+            if (!adminData) return;
+            if (type === 'global') {
+                seenAdmin.global = adminData.globalChat.length;
+            } else {
+                seenAdmin[type] = adminData.messages.filter(m => m.type === type).length;
+            }
+            saveSeenAdmin();
+            updateChatBadges();
         }
 
         function renderInventory() {
@@ -392,35 +479,41 @@
                 if (u.isBanned) {
                     actionBtns = `<button class="btn-mini btn-unban" onclick="chatAction('${u.id}', 'unban')">Разбанить</button>`;
                 } else {
-                    // Умный мут: выбор времени + своё значение
-                    let muteControls = `
-                        <select class="mute-select" id="mute-time-${u.id}">
-                            <option value="30">30 минут</option>
-                            <option value="60">1 час</option>
-                            <option value="360">6 часов</option>
-                            <option value="1440">1 день</option>
-                            <option value="10080">7 дней</option>
-                            <option value="43200">30 дней</option>
-                            <option value="525600">365 дней</option>
-                            <option value="custom">Своё...</option>
-                        </select>
-                        <input type="number" class="mute-custom" id="mute-custom-${u.id}" placeholder="мин" min="1" max="525600" style="display: none;">
-                        <button class="btn-mini btn-mute" onclick="applyMute('${u.id}')">Мут</button>
-                    `;
+                    let muteControls = '';
                     if (u.isMuted) {
-                        let until = u.mutedUntil ? new Date(u.mutedUntil).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+                        const until = u.mutedUntil ? new Date(u.mutedUntil).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
                         muteControls = `
                             <button class="btn-mini btn-unmute" onclick="chatAction('${u.id}', 'unmute')">Снять мут</button>
-                            <span style="font-size: 11px; color: #ffb703; align-self: center;">до ${until}</span>
+                            <div class="mute-info">
+                                <span>Мут до: ${until}</span>
+                                ${u.muteReason ? `<span>Причина: ${esc(u.muteReason)}</span>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        muteControls = `
+                            <select class="mute-select" id="mute-time-${u.id}">
+                                <option value="30">30 минут</option>
+                                <option value="60">1 час</option>
+                                <option value="360">6 часов</option>
+                                <option value="1440">1 день</option>
+                                <option value="10080">7 дней</option>
+                                <option value="43200">30 дней</option>
+                                <option value="525600">365 дней</option>
+                                <option value="custom">Своё...</option>
+                            </select>
+                            <input type="number" class="mute-custom" id="mute-custom-${u.id}" placeholder="мин" min="1" max="525600" style="display: none;">
+                            <button class="btn-mini btn-mute" onclick="openMuteModal('${u.id}')">Мут</button>
                         `;
                     }
-                    actionBtns = `
-                        ${muteControls}
-                        <button class="btn-mini btn-ban" onclick="chatAction('${u.id}', 'ban')">Бан</button>
-                    `;
+                    actionBtns = `${muteControls}<button class="btn-mini btn-ban" onclick="openBanModal('${u.id}')">Бан</button>`;
                 }
 
                 let roleLabel = u.role === 'owner' ? '👑 Владелец' : (u.role === 'moder' ? '🛡️ Модер' : (u.role === 'tester' ? '🧪 Тестер' : '👤 Игрок'));
+
+                let banInfoHtml = '';
+                if (u.isBanned && u.banReason) {
+                    banInfoHtml = `<div class="ban-info">Причина бана: ${esc(u.banReason)}</div>`;
+                }
 
                 list.innerHTML += `
                     <div class="user-admin-item">
@@ -428,6 +521,7 @@
                             <span class="user-admin-name">${esc(u.name)}</span>
                             <span style="font-size: 11px; color: #00d2ff;">${roleLabel}</span>
                         </div>
+                        ${banInfoHtml}
                         <div class="user-admin-row">
                             <select class="role-select" onchange="changeRole('${u.id}', this.value, this)">
                                 <option value="user" ${u.role === 'user' ? 'selected' : ''}>Игрок</option>
@@ -441,7 +535,6 @@
                 `;
             });
 
-            // Обработчик для селектов «Своё...»
             document.querySelectorAll('.mute-select').forEach(sel => {
                 sel.addEventListener('change', function() {
                     const userId = this.id.replace('mute-time-', '');
@@ -452,20 +545,75 @@
             });
         }
 
-        // Применение мута
-        async function applyMute(userId) {
+        // --- МОДАЛКА МУТА ---
+        function openMuteModal(userId) {
+            const user = adminData.users.find(u => u.id === userId);
+            if (!user) return;
+            
             const sel = document.getElementById(`mute-time-${userId}`);
             let minutes = sel.value;
+            let timeLabel = '';
+            
             if (minutes === 'custom') {
                 const custom = document.getElementById(`mute-custom-${userId}`);
                 minutes = parseInt(custom.value);
                 if (!minutes || minutes < 1) return alert('Введите количество минут (минимум 1)');
                 if (minutes > 525600) minutes = 525600;
+                timeLabel = `${minutes} минут`;
+            } else {
+                timeLabel = sel.options[sel.selectedIndex].text;
             }
-            await chatAction(userId, 'mute', parseInt(minutes));
+            
+            pendingMute = { userId, minutes: parseInt(minutes) };
+            
+            document.getElementById('mute-confirm-text').innerHTML = 
+                `Замутить игрока <b>${esc(user.name)}</b> на <b>${timeLabel}</b>?`;
+            document.getElementById('mute-reason-input').value = '';
+            document.getElementById('muteModal').classList.add('show');
         }
 
-        // Красивое окно подтверждения смены роли
+        function cancelMute() {
+            document.getElementById('muteModal').classList.remove('show');
+            pendingMute = null;
+        }
+
+        async function confirmMute() {
+            if (!pendingMute) return;
+            const reason = document.getElementById('mute-reason-input').value.trim();
+            document.getElementById('muteModal').classList.remove('show');
+            
+            await chatAction(pendingMute.userId, 'mute', pendingMute.minutes, reason);
+            pendingMute = null;
+        }
+
+        // --- МОДАЛКА БАНА ---
+        function openBanModal(userId) {
+            const user = adminData.users.find(u => u.id === userId);
+            if (!user) return;
+            
+            pendingBan = { userId };
+            
+            document.getElementById('ban-confirm-text').innerHTML = 
+                `Забанить игрока <b>${esc(user.name)}</b>? Он не сможет писать в чат.`;
+            document.getElementById('ban-reason-input').value = '';
+            document.getElementById('banModal').classList.add('show');
+        }
+
+        function cancelBan() {
+            document.getElementById('banModal').classList.remove('show');
+            pendingBan = null;
+        }
+
+        async function confirmBan() {
+            if (!pendingBan) return;
+            const reason = document.getElementById('ban-reason-input').value.trim();
+            document.getElementById('banModal').classList.remove('show');
+            
+            await chatAction(pendingBan.userId, 'ban', 0, reason);
+            pendingBan = null;
+        }
+
+        // --- СМЕНА РОЛИ ---
         function changeRole(userId, newRole, selectEl) {
             const user = adminData.users.find(u => u.id === userId);
             const roleNames = { user: 'Игрок', tester: 'Тестер', moder: 'Модер', owner: 'Владелец' };
@@ -504,9 +652,9 @@
             }
         }
 
-        async function chatAction(userId, action, minutes = 0) {
+        async function chatAction(userId, action, minutes = 0, reason = '') {
             try {
-                const res = await fetch('/api/admin/chat-action', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId, action, minutes }) });
+                const res = await fetch('/api/admin/chat-action', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId, action, minutes, reason }) });
                 if (!res.ok) alert('Ошибка действия: ' + res.status);
                 loadData();
             } catch (e) { alert('Ошибка сети: ' + e.message); }
@@ -603,6 +751,8 @@
             document.getElementById('tab-global').classList.remove('active');
             document.getElementById('tab-' + type).classList.add('active');
             
+            markAdminTabSeen(type);
+            
             if (type === 'global') {
                 document.getElementById('private-chats-layout').style.display = 'none';
                 document.getElementById('global-chat-layout').style.display = 'flex';
@@ -623,9 +773,14 @@
             usersWithMsgs.forEach(userId => {
                 const user = adminData.users.find(u => u.id === userId);
                 if (user) {
+                    const userMsgsCount = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType).length;
+                    const seen = seenAdmin.users[userId + '_' + currentChatType] || 0;
+                    const unread = Math.max(0, userMsgsCount - seen);
+                    
                     const div = document.createElement('div');
                     div.className = `user-item ${currentChatUser === userId ? 'active' : ''}`;
-                    div.innerText = user.name;
+                    div.innerHTML = `<span>${esc(user.name)}</span><span class="user-badge" data-userid="${userId}">${unread}</span>`;
+                    if (unread > 0) div.querySelector('.user-badge').style.display = 'inline-block';
                     div.onclick = () => openChat(userId);
                     list.appendChild(div);
                 }
@@ -633,7 +788,13 @@
         }
 
         function openChat(userId) {
-            currentChatUser = userId; renderChatUsers();
+            currentChatUser = userId; 
+            // Помечаем как прочитанное
+            const count = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType).length;
+            seenAdmin.users[userId + '_' + currentChatType] = count;
+            saveSeenAdmin();
+            
+            renderChatUsers();
             const msgBox = document.getElementById('chat-messages'); msgBox.innerHTML = '';
             const userMsgs = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType);
             userMsgs.forEach(m => { msgBox.innerHTML += `<div class="msg ${m.sender}">${esc(m.text)}</div>`; });
@@ -653,6 +814,10 @@
         function renderGlobalAdminChat() {
             const box = document.getElementById('admin-gc-box');
             if (!adminData.globalChat) return;
+            
+            const prevCount = box.children.length;
+            const hasNew = adminData.globalChat.length > prevCount;
+            if (!hasNew && prevCount > 0) return; // Ничего не поменялось — не перерисовываем
             
             box.innerHTML = '';
             adminData.globalChat.forEach(m => {
