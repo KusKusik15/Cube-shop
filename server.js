@@ -386,7 +386,7 @@ app.post('/api/admin/inventory', (req, res) => {
     db.inventory = newInv; db.prices = newPrices; saveDB(); res.json({ success: true });
 });
 
-// Смена роли юзера
+// Смена роли юзера (БЕЗ защиты "последнего владельца")
 app.post('/api/admin/set-role', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, role } = req.body;
@@ -397,12 +397,7 @@ app.post('/api/admin/set-role', (req, res) => {
     const user = db.users.find(u => u.id === userId);
     if (!user) return res.status(404).json({ message: 'Юзер не найден' });
 
-    if (user.role === 'owner' && role !== 'owner') {
-        const ownersCount = db.users.filter(u => u.role === 'owner').length;
-        if (ownersCount <= 1) {
-            return res.status(400).json({ message: 'Нельзя снять роль с последнего владельца' });
-        }
-    }
+    // Защита убрана — владельцев может быть много
 
     user.role = role;
     saveDB();
