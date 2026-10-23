@@ -9,7 +9,6 @@ const webpush = require('web-push');
 const crypto = require('crypto');
 
 const app = express();
-
 app.set('trust proxy', 1);
 
 function getMoscowTime() {
@@ -101,17 +100,14 @@ app.get('/api/user', (req, res) => {
 });
 
 app.get('/api/team', (req, res) => {
-    // Сначала ищем владельца
     const team = db.users.filter(u => u.role && u.role !== 'user').map(u => ({
         name: u.gameNick || u.name, role: u.role, avatar: u.avatar
     }));
     
-    // Добавим принудительно админа, если его вдруг нет в списке (для надежности)
     if (!team.some(t => t.role === 'owner')) {
         team.push({ name: 'KusKusik15', role: 'owner', avatar: null });
     }
     
-    // Сортируем: сначала владельцы, потом модеры, потом тестеры
     const roleOrder = { owner: 1, moder: 2, tester: 3 };
     team.sort((a, b) => (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99));
     
@@ -300,12 +296,20 @@ app.get('/api/orders', (req, res) => {
     res.json(db.orders.filter(o => o.userId === req.user.id)); 
 });
 
+// Обновленный эндпоинт для получения СВОИХ отзывов
+app.get('/api/my-reviews', (req, res) => {
+    if (!req.user) return res.status(401).json({});
+    const myReviews = db.reviews.filter(r => r.userId === req.user.id);
+    res.json(myReviews);
+});
+
 app.get('/api/reviews/all', (req, res) => {
     const allReviews = db.reviews.map(r => { const user = db.users.find(u => u.id === r.userId); return { id: r.id, userName: user ? (user.gameNick || 'Игрок') : 'Аноним', rating: r.rating, text: r.text, itemId: r.itemId, date: r.date }; });
     let total = allReviews.length; let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }; let sum = 0;
     allReviews.forEach(r => { if (stats[r.rating] !== undefined) stats[r.rating]++; sum += r.rating; });
     res.json({ reviews: allReviews.reverse().slice(0, 10), stats, average: total > 0 ? (sum / total).toFixed(1) : 0, total });
 });
+
 app.post('/api/reviews/add', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { orderId, rating, text } = req.body;
@@ -392,8 +396,6 @@ app.post('/api/admin/login', (req, res) => {
     if (req.body.password === ADMIN_PASSWORD) { 
         req.session.isAdmin = true; 
         
-        // Ищем твой аккаунт. Если залогинен — выдаем роль владельца.
-        // Если нет — ищем по имени KusKusik15, если нет — создаем технического владельца.
         let adminUser = null;
         if (req.user) {
             adminUser = db.users.find(u => u.id === req.user.id);
@@ -408,12 +410,8 @@ app.post('/api/admin/login', (req, res) => {
             }
         }
 
-        if (adminUser && adminUser.role !== 'owner') {
-            adminUser.role = 'owner';
-        }
-        if (adminUser && !adminUser.gameNick) {
-            adminUser.gameNick = 'KusKusik15';
-        }
+        if (adminUser && adminUser.role !== 'owner') adminUser.role = 'owner';
+        if (adminUser && !adminUser.gameNick) adminUser.gameNick = 'KusKusik15';
         
         saveDB();
         res.json({ success: true }); 
