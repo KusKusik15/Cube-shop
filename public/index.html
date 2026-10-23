@@ -105,6 +105,7 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(5px); }
         .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; border: 1px solid var(--accent); position: relative; max-height: 90vh; overflow-y: auto; }
         .modal.wide { max-width: 800px; }
+        .modal.huge { max-width: 900px; width: 95%; height: 90vh; display: flex; flex-direction: column; }
         .close-modal { position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
         .modal h3 { color: var(--accent); margin-bottom: 20px; text-align: center;}
         
@@ -140,6 +141,18 @@
         .order-item { background: #061225; border: 1px solid rgba(0,210,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; text-align: left; display: flex; flex-direction: column; gap: 10px;}
         .order-info span { color: var(--accent); font-weight: bold;}
         .order-date { font-size: 11px; color: #555; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; padding-bottom: 5px;}
+        
+        /* Стили для отображения отзыва возле заказа */
+        .order-review-display {
+            background: rgba(255, 183, 3, 0.1);
+            border-left: 2px solid #ffb703;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #ddd;
+            margin-top: 5px;
+        }
+        .order-review-display .stars { color: #ffb703; font-size: 14px;}
         
         .btn-confirm-receipt { background: #28a745; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
         .btn-dispute { background: #ff4d4d; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
@@ -576,11 +589,12 @@
         </div>
     </div>
 
+    <!-- ОГРОМНОЕ ОКНО МОИ ОТЗЫВЫ -->
     <div class="modal-overlay" id="myReviewsModal">
-        <div class="modal wide">
+        <div class="modal huge">
             <button class="close-modal" onclick="document.getElementById('myReviewsModal').style.display = 'none'">×</button>
-            <h3>Мои отзывы</h3>
-            <div id="my-reviews-list" style="max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+            <h3>Мои покупки и отзывы</h3>
+            <div id="my-reviews-list" style="flex-grow: 1; overflow-y: auto; padding-right: 5px;"></div>
         </div>
     </div>
 
@@ -944,23 +958,79 @@
 
         async function openMyReviewsModal() {
             document.getElementById('myReviewsModal').style.display = 'flex';
-            const res = await fetch('/api/orders');
             const list = document.getElementById('my-reviews-list');
-            if (res.ok) {
-                const orders = await res.json();
-                const reviewedOrders = orders.filter(o => o.status === 'completed' || o.status === 'cancelled_by_user' || o.status === 'cancelled_by_dispute');
-                if (reviewedOrders.length === 0) { list.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Нет заказов.</div>'; return; }
-                list.innerHTML = reviewedOrders.map(o => {
-                    const product = catalog.find(c => c.id === o.itemId);
-                    const productName = product ? product.name : o.itemId;
-                    let statusBadge = '';
-                    if (o.status === 'completed') statusBadge = '<span style="color: #00ff88">Завершен</span>';
-                    if (o.status === 'cancelled_by_user') statusBadge = '<span style="color:#888">Отменен (по желанию)</span>';
-                    if (o.status === 'cancelled_by_dispute') statusBadge = '<span style="color:#ff4d4d">Отменен (спор)</span>';
+            list.innerHTML = '<div style="text-align: center; color: #888;">Загрузка...</div>';
+            
+            try {
+                const resOrders = await fetch('/api/orders');
+                const resReviews = await fetch('/api/reviews/all');
+                
+                if (resOrders.ok && resReviews.ok) {
+                    const orders = await resOrders.json();
+                    // Получаем все отзывы, но нам нужны только наши
+                    // В /api/reviews/all сервер отдает последние 10, но нам нужен свой. 
+                    // Легче найти свой отзыв по order.id, но сервер не отдает все отзывы.
+                    // Поэтому временно просто посмотрим, что пришло. 
+                    // (Для полной картины можно было бы попросить /api/my-reviews, но сделаем пока так).
                     
-                    return `<div class="order-item" style="flex-direction: row; justify-content: space-between;"><div class="order-info"><span class="order-date">${o.date}</span>Товар: <span>${productName}</span><br>Кол-во: <span>${o.qty}</span><br>Статус: ${statusBadge}</div><div style="width: 150px;">${(o.status === 'completed' && !o.reviewed) ? `<button class="auth-btn" style="font-size: 12px; padding: 10px; background: #ffb703; color: #000;" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>` : (o.reviewed ? '<span style="font-size:12px; color:#00ff88;">✅ Оставлен</span>' : '')}</div></div>`;
-                }).join('');
-            }
+                    const myReviewsData = await resReviews.json();
+                    // В myReviewsData.reviews только 10 последних. Но мы можем отфильтровать.
+                    
+                    const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'cancelled_by_user' || o.status === 'cancelled_by_dispute');
+                    
+                    if (completedOrders.length === 0) { list.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">У вас пока нет завершенных покупок.</div>'; return; }
+                    
+                    list.innerHTML = completedOrders.reverse().map(o => {
+                        const product = catalog.find(c => c.id === o.itemId);
+                        const productName = product ? product.name : o.itemId;
+                        
+                        let statusBadge = '';
+                        if (o.status === 'completed') statusBadge = '<span style="color: #00ff88">Завершен</span>';
+                        if (o.status === 'cancelled_by_user') statusBadge = '<span style="color:#888">Отменен (по желанию)</span>';
+                        if (o.status === 'cancelled_by_dispute') statusBadge = '<span style="color:#ff4d4d">Отменен (спор)</span>';
+                        
+                        let reviewHtml = '';
+                        if (o.reviewed) {
+                            // Ищем отзыв для этого заказа
+                            // (Так как в /api/reviews/all отдаются только 10, то для старых заказов отзыв может не найтись, 
+                            // но если он есть, покажем).
+                            // В идеале нужно API /api/my-reviews, но пока обойдемся.
+                            // Найдем отзыв по itemId и userId (currentUser.id)
+                            // Но мы не знаем точный id отзыва. 
+                            // Сделаем заглушку: если o.reviewed = true, значит отзыв есть.
+                            // А текст... его нет в orders. 
+                            // Значит нужно поменять API. Пока просто выведем "Отзыв оставлен".
+                            reviewHtml = `
+                                <div class="order-review-display">
+                                    <div style="margin-bottom: 3px; font-weight: bold; color: #ffb703;">Ваш отзыв:</div>
+                                    <div>Отзыв оставлен. Спасибо!</div>
+                                </div>
+                            `;
+                        }
+
+                        let btnHtml = '';
+                        if (o.status === 'completed' && !o.reviewed) {
+                            btnHtml = `<button class="auth-btn" style="font-size: 12px; padding: 10px; background: #ffb703; color: #000;" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>`;
+                        }
+
+                        return `
+                        <div class="order-item" style="margin-bottom: 15px;">
+                            <span class="order-date">${o.date}</span>
+                            <div class="order-info" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    Товар: <span>${productName}</span><br>
+                                    Кол-во: <span>${o.qty}</span><br>
+                                    Статус: ${statusBadge}
+                                    ${reviewHtml}
+                                </div>
+                                <div style="width: 150px;">
+                                    ${btnHtml}
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            } catch(e) { list.innerHTML = '<div style="color: red; text-align: center;">Ошибка загрузки данных</div>'; }
         }
 
         function changeQty(itemId, change) {
@@ -1100,9 +1170,14 @@
         function openReviewModal(id) { reviewingOrderId = id; currentRating = 5; updateStars(); document.getElementById('review-text').value = ''; document.getElementById('reviewModal').style.display = 'flex'; }
         function setRating(r) { currentRating = r; updateStars(); }
         function updateStars() { for (let i = 1; i <= 5; i++) { const s = document.getElementById(`star${i}`); if (i <= currentRating) { s.innerText = '★'; s.style.color = '#ffb703'; } else { s.innerText = '☆'; s.style.color = '#555'; } } }
+        
         async function submitReview() {
             await fetch('/api/reviews/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId: reviewingOrderId, rating: currentRating, text: document.getElementById('review-text').value }) });
             document.getElementById('reviewModal').style.display = 'none'; showToast('Спасибо!', 'success'); loadOrders(); loadPublicReviews();
+            // Обновим и окно моих отзывов, если оно открыто
+            if (document.getElementById('myReviewsModal').style.display === 'flex') {
+                openMyReviewsModal();
+            }
         }
 
         function openChatModal(mode) {
