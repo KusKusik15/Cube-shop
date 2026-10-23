@@ -92,7 +92,7 @@
         .msg.user { background: #333; align-self: flex-start; }
         .msg.admin { background: var(--blue); color: #000; align-self: flex-end; }
         
-        .gc-msg { padding: 10px; border-radius: 5px; background: #111; border-left: 3px solid #333; display: flex; justify-content: space-between; gap: 10px; position: relative; group: msg;}
+        .gc-msg { padding: 10px; border-radius: 5px; background: #111; border-left: 3px solid #333; display: flex; justify-content: space-between; gap: 10px; position: relative;}
         .gc-msg.role-owner { border-left-color: var(--gold); background: rgba(255, 183, 3, 0.05);}
         .gc-msg.role-moder { border-left-color: var(--accent); background: rgba(255, 77, 77, 0.05);}
         .gc-msg.role-tester { border-left-color: var(--blue); background: rgba(0, 210, 255, 0.05);}
@@ -105,7 +105,7 @@
         .gc-reply-quote { background: rgba(0,0,0,0.3); border-left: 3px solid #888; padding: 5px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 12px; color: #aaa; }
         .gc-reply-quote b { color: var(--blue); }
 
-        .gc-actions { display: none; gap: 10px; position: absolute; top: -12px; right: 10px; background: #000; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
+        .gc-actions { display: none; gap: 5px; position: absolute; top: -14px; right: 10px; background: #000; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
         .gc-msg:hover .gc-actions { display: flex; }
         .gc-actions button { background: transparent; border: none; cursor: pointer; font-size: 14px; color: #888; padding: 0; }
         .gc-actions button:hover { color: var(--blue); }
@@ -265,7 +265,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА СМЕНЫ РОЛИ -->
     <div class="admin-modal-overlay" id="roleConfirmModal">
         <div class="admin-modal">
             <h3>Смена роли</h3>
@@ -277,7 +276,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА МУТА -->
     <div class="admin-modal-overlay" id="muteModal">
         <div class="admin-modal">
             <h3>🔇 Замутить игрока</h3>
@@ -290,7 +288,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА БАНА -->
     <div class="admin-modal-overlay" id="banModal">
         <div class="admin-modal">
             <h3>🚫 Забанить игрока</h3>
@@ -303,7 +300,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА РЕДАКТИРОВАНИЯ СООБЩЕНИЯ -->
     <div class="admin-modal-overlay" id="editMsgModal">
         <div class="admin-modal">
             <h3>✏️ Редактировать сообщение</h3>
@@ -352,7 +348,6 @@
         let pendingBan = null;
         let lastGlobalId = null;
 
-        // Для ответов и редактирования
         let replyToId = null;
         let editingMsgId = null;
 
@@ -423,7 +418,6 @@
             }
         }
 
-        // --- КОМАНДА В АДМИНКЕ ---
         function renderTeamAdmin() {
             const list = document.getElementById('team-admin-list');
             if (!adminData.users) return;
@@ -861,11 +855,12 @@
             try {
                 const res = await fetch('/api/admin/reply', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentChatUser, text: text, type: currentChatType }) });
                 if (!res.ok) { alert('Ошибка отправки: ' + res.status); return; }
-                input.value = ''; loadData(); 
+                input.value = ''; 
+                await loadData(); 
+                openChat(currentChatUser); // принудительно перерисовать, чтобы увидеть свое сообщение
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
 
-        // --- ОБЩИЙ ЧАТ (АДМИН) ---
         function replyToMessage(msgId, text, name) {
             replyToId = msgId;
             document.getElementById('gc-reply-text').innerHTML = `<b>${name}:</b> ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`;
@@ -895,10 +890,26 @@
             
             document.getElementById('editMsgModal').classList.remove('show');
             if (res.ok) {
-                loadData();
+                await loadData();
                 renderGlobalAdminChat(true);
             } else {
                 alert('Ошибка редактирования');
+            }
+        }
+
+        async function deleteMsg(msgId) {
+            if (!confirm('Удалить это сообщение?')) return;
+            
+            const res = await fetch('/api/admin/global-chat/delete', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId })
+            });
+            
+            if (res.ok) {
+                await loadData();
+                renderGlobalAdminChat(true);
+            } else {
+                alert('Ошибка удаления');
             }
         }
 
@@ -944,6 +955,7 @@
                     actionsHtml += `<button onclick="replyToMessage('${m.id}', '${m.text.replace(/'/g, "\\'")}', '${esc(m.name)}')" title="Ответить">↩️</button>`;
                     if (m.role === 'owner') {
                         actionsHtml += `<button onclick="openEditMsgModal('${m.id}', '${m.text.replace(/'/g, "\\'")}')" title="Редактировать">✏️</button>`;
+                        actionsHtml += `<button onclick="deleteMsg('${m.id}')" title="Удалить" style="color:#ff4d4d;">🗑️</button>`;
                     }
                 }
                 actionsHtml += `</div>`;
@@ -966,7 +978,7 @@
                                 </div>
                                 <div class="gc-text">${esc(m.text)}</div>
                             </div>
-                            <button class="btn-del-msg" onclick="deleteGlobalMessage('${m.id}')" title="Удалить">×</button>
+                            <button class="btn-del-msg" onclick="deleteMsg('${m.id}')" title="Удалить">×</button>
                         </div>
                     `;
                 }
