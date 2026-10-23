@@ -106,7 +106,6 @@
         .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; border: 1px solid var(--accent); position: relative; max-height: 90vh; overflow-y: auto; }
         .modal.wide { max-width: 800px; }
         
-        /* ОКНО НА ВЕСЬ ЭКРАН ДЛЯ ОТЗЫВОВ */
         .fullscreen-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 9000; display: none; flex-direction: column; }
         .fs-header { background: rgba(6, 18, 37, 0.95); padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--accent); }
         .fs-header h3 { color: var(--accent); font-size: 20px; margin: 0; }
@@ -411,7 +410,6 @@
         </div>
     </div>
 
-    <!-- ОКНО МОИХ ОТЗЫВОВ НА ВЕСЬ ЭКРАН -->
     <div class="fullscreen-modal" id="myReviewsModal">
         <div class="fs-header">
             <h3>⭐ Мои покупки и отзывы</h3>
@@ -864,7 +862,8 @@
                         if (o.status === 'cancelled_by_user') statusBadge = '<span style="color:#888">Отменен (по желанию)</span>';
                         if (o.status === 'cancelled_by_dispute') statusBadge = '<span style="color:#ff4d4d">Отменен (спор)</span>';
                         
-                        let reviewData = myReviews.find(r => r.itemId === o.itemId && new Date(r.date) >= new Date(o.date));
+                        // Ищем отзыв строго по ID заказа (orderId)
+                        let reviewData = myReviews.find(r => r.orderId === o.id);
                         
                         let reviewHtml = '';
                         if (reviewData) {
@@ -876,7 +875,7 @@
                                 </div>
                             `;
                         } else if (o.reviewed) {
-                            reviewHtml = `<div class="order-review-display"><div style="color:#888;">Отзыв оставлен.</div></div>`;
+                            reviewHtml = `<div class="order-review-display"><div style="color:#888;">Отзыв оставлен (для старых версий).</div></div>`;
                         }
 
                         let btnHtml = '';
