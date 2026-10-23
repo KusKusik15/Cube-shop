@@ -10,7 +10,6 @@ const crypto = require('crypto');
 
 const app = express();
 
-// ВАЖНО ДЛЯ NETRUN
 app.set('trust proxy', 1);
 
 function getMoscowTime() {
@@ -102,9 +101,20 @@ app.get('/api/user', (req, res) => {
 });
 
 app.get('/api/team', (req, res) => {
+    // Сначала ищем владельца
     const team = db.users.filter(u => u.role && u.role !== 'user').map(u => ({
         name: u.gameNick || u.name, role: u.role, avatar: u.avatar
     }));
+    
+    // Добавим принудительно админа, если его вдруг нет в списке (для надежности)
+    if (!team.some(t => t.role === 'owner')) {
+        team.push({ name: 'KusKusik15', role: 'owner', avatar: null });
+    }
+    
+    // Сортируем: сначала владельцы, потом модеры, потом тестеры
+    const roleOrder = { owner: 1, moder: 2, tester: 3 };
+    team.sort((a, b) => (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99));
+    
     res.json(team);
 });
 
@@ -285,7 +295,11 @@ app.post('/api/profile/password', async (req, res) => {
 });
 
 // --- ЗАКАЗЫ И ЧАТЫ ---
-app.get('/api/orders', (req, res) => { if (!req.user) return res.status(401).json({}); res.json(db.orders.filter(o => o.userId === req.user.id)); });
+app.get('/api/orders', (req, res) => { 
+    if (!req.user) return res.status(401).json({}); 
+    res.json(db.orders.filter(o => o.userId === req.user.id)); 
+});
+
 app.get('/api/reviews/all', (req, res) => {
     const allReviews = db.reviews.map(r => { const user = db.users.find(u => u.id === r.userId); return { id: r.id, userName: user ? (user.gameNick || 'Игрок') : 'Аноним', rating: r.rating, text: r.text, itemId: r.itemId, date: r.date }; });
     let total = allReviews.length; let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }; let sum = 0;
@@ -378,16 +392,30 @@ app.post('/api/admin/login', (req, res) => {
     if (req.body.password === ADMIN_PASSWORD) { 
         req.session.isAdmin = true; 
         
-        // АВТО-ВЫДАЧА РОЛИ ВЛАДЕЛЬЦА
-        // Если это админ и он залогинен как юзер, делаем его владельцем
+        // Ищем твой аккаунт. Если залогинен — выдаем роль владельца.
+        // Если нет — ищем по имени KusKusik15, если нет — создаем технического владельца.
+        let adminUser = null;
         if (req.user) {
-            const user = db.users.find(u => u.id === req.user.id);
-            if (user && user.role !== 'owner') {
-                user.role = 'owner';
-                saveDB();
+            adminUser = db.users.find(u => u.id === req.user.id);
+        } else {
+            adminUser = db.users.find(u => (u.gameNick || u.name) === 'KusKusik15');
+            if (!adminUser) {
+                adminUser = { 
+                    id: 'admin-owner-id', name: 'KusKusik15', gameNick: 'KusKusik15', 
+                    role: 'owner', avatar: null, isBanned: false, mutedUntil: null, banReason: null, muteReason: null 
+                };
+                db.users.push(adminUser);
             }
         }
+
+        if (adminUser && adminUser.role !== 'owner') {
+            adminUser.role = 'owner';
+        }
+        if (adminUser && !adminUser.gameNick) {
+            adminUser.gameNick = 'KusKusik15';
+        }
         
+        saveDB();
         res.json({ success: true }); 
     } else { 
         res.status(401).json({}); 
