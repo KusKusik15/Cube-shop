@@ -71,7 +71,7 @@ passport.use(new YandexStrategy({
   },
   function(accessToken, refreshToken, profile, done) {
     let user = db.users.find(u => u.yandexId === profile.id);
-    if (!user) { user = { id: Date.now().toString(), yandexId: profile.id, name: profile.displayName, gameNick: null, avatar: null, role: 'user', mutedUntil: null, isBanned: false }; db.users.push(user); saveDB(); }
+    if (!user) { user = { id: Date.now().toString(), yandexId: profile.id, name: profile.displayName, gameNick: null, avatar: null, role: 'user', mutedUntil: null, muteReason: null, isBanned: false, banReason: null }; db.users.push(user); saveDB(); }
     return done(null, user);
   }
 ));
@@ -79,8 +79,21 @@ passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => { const user = db.users.find(u => u.id === id); done(null, user); });
 
 app.get('/api/user', (req, res) => {
-    if (req.user) res.json({ name: req.user.name, gameNick: req.user.gameNick, avatar: req.user.avatar, role: req.user.role || 'user' });
-    else res.status(401).json({ error: 'Not logged in' });
+    if (req.user) {
+        const u = db.users.find(x => x.id === req.user.id);
+        res.json({ 
+            name: u.name, 
+            gameNick: u.gameNick, 
+            avatar: u.avatar, 
+            role: u.role || 'user',
+            isBanned: u.isBanned || false,
+            banReason: u.banReason || null,
+            mutedUntil: u.mutedUntil || null,
+            muteReason: u.muteReason || null
+        });
+    } else {
+        res.status(401).json({ error: 'Not logged in' });
+    }
 });
 
 // --- ОБЩИЙ ЧАТ ---
@@ -93,15 +106,16 @@ app.post('/api/global-chat', (req, res) => {
     
     const user = db.users.find(u => u.id === req.user.id);
     
-    if (user.isBanned) return res.status(403).json({ message: 'Вы забанены в чате.' });
+    if (user.isBanned) return res.status(403).json({ message: 'Вы забанены в чате.' + (user.banReason ? ' Причина: ' + user.banReason : ''), reason: user.banReason });
     
     if (user.mutedUntil) {
         const now = new Date().getTime();
         if (now < user.mutedUntil) {
             const remainingMinutes = Math.ceil((user.mutedUntil - now) / 60000);
-            return res.status(403).json({ message: `У вас мут еще на ${remainingMinutes} мин.` });
+            return res.status(403).json({ message: `У вас мут еще на ${remainingMinutes} мин.` + (user.muteReason ? ' Причина: ' + user.muteReason : ''), reason: user.muteReason, mutedUntil: user.mutedUntil });
         } else {
             user.mutedUntil = null;
+            user.muteReason = null;
             saveDB();
         }
     }
@@ -110,7 +124,7 @@ app.post('/api/global-chat', (req, res) => {
     if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
 
     const newMsg = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         userId: req.user.id,
         name: user.gameNick || user.name,
         role: user.role || 'user',
@@ -131,7 +145,7 @@ app.post('/api/admin/global-chat/send', (req, res) => {
     if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
 
     const newMsg = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         userId: 'owner',
         name: 'KusKusik15',
         role: 'owner',
@@ -152,27 +166,33 @@ app.post('/api/admin/global-chat/delete', (req, res) => {
     res.json({ success: true });
 });
 
-// Мут и Бан (Админ) — теперь принимает любое количество минут
+// Мут и Бан (Админ) — теперь с причиной
 app.post('/api/admin/chat-action', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    const { userId, action, minutes } = req.body;
+    const { userId, action, minutes, reason } = req.body;
     const user = db.users.find(u => u.id === userId);
     
     if (!user) return res.status(404).json({ message: 'Юзер не найден' });
 
     if (action === 'mute') {
-        // Максимум — 365 дней = 525600 минут
         let mins = parseInt(minutes) || 30;
         if (mins < 1) mins = 1;
         if (mins > 525600) mins = 525600;
         user.mutedUntil = new Date().getTime() + (mins * 60000);
+        user.muteReason = reason || null;
     } else if (action === 'unmute') {
         user.mutedUntil = null;
+        user.muteReason = null;
     } else if (action === 'ban') {
         user.isBanned = true;
+        user.banReason = reason || null;
+        user.mutedUntil = null;
+        user.muteReason = null;
     } else if (action === 'unban') {
         user.isBanned = false;
+        user.banReason = null;
         user.mutedUntil = null;
+        user.muteReason = null;
     }
     
     saveDB();
@@ -185,7 +205,7 @@ app.get('/api/news', (req, res) => { res.json([...db.news].sort((a,b) => (b.pinn
 app.post('/api/admin/news', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const { title, content } = req.body;
-    db.news.unshift({ id: Date.now().toString(), title, content, date: getMoscowTime(), edited: null, pinned: false }); 
+    db.news.unshift({ id: crypto.randomUUID(), title, content, date: getMoscowTime(), edited: null, pinned: false }); 
     saveDB(); res.json({ success: true });
 });
 
@@ -247,7 +267,7 @@ app.post('/api/reviews/add', (req, res) => {
     const { orderId, rating, text } = req.body;
     const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
     if (!order) return res.status(404).json({ message: 'Заказ не найден' });
-    db.reviews.push({ id: Date.now().toString(), userId: req.user.id, itemId: order.itemId, rating, text, date: getMoscowTime() });
+    db.reviews.push({ id: crypto.randomUUID(), userId: req.user.id, itemId: order.itemId, rating, text, date: getMoscowTime() });
     order.reviewed = true; saveDB(); res.json({ success: true });
 });
 
@@ -281,7 +301,7 @@ app.get('/api/chat', (req, res) => { if (!req.user) return res.status(401).json(
 app.post('/api/chat', (req, res) => {
     if (!req.user) return res.status(401).json({});
     const { text, type } = req.body;
-    db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: type, text: text, time: getMoscowTime() });
+    db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'user', type: type, text: text, time: getMoscowTime() });
     saveDB();
 
     let autoReply = 'Сообщение получено. Админ ответит позже.';
@@ -292,7 +312,7 @@ app.post('/api/chat', (req, res) => {
     }
 
     setTimeout(() => { 
-        db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'admin', type: type, text: autoReply, time: getMoscowTime() }); 
+        db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'admin', type: type, text: autoReply, time: getMoscowTime() }); 
         saveDB(); 
     }, 1000);
 
@@ -305,7 +325,7 @@ app.post('/api/register', async (req, res) => {
     const { login, password, gameNick } = req.body;
     if (db.users.find(u => u.name === login)) return res.status(400).json({ message: 'Логин занят!' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick: gameNick, avatar: null, role: 'user', mutedUntil: null, isBanned: false };
+    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick: gameNick, avatar: null, role: 'user', mutedUntil: null, muteReason: null, isBanned: false, banReason: null };
     db.users.push(newUser); saveDB();
     req.login(newUser, (err) => { if (err) return res.status(500).json({}); res.json({ message: 'Успешно!' }); });
 });
@@ -325,7 +345,7 @@ app.post('/api/order', (req, res) => {
     if (!db.inventory[itemId] || db.inventory[itemId] < qty) return res.status(400).json({ message: 'Нет в наличии!' });
     const currentPrice = (db.prices && db.prices[itemId]) ? parseInt(db.prices[itemId]) : 0;
     db.inventory[itemId] -= qty;
-    db.orders.push({ id: Date.now().toString(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, price: currentPrice, status: 'pending', reviewed: false, date: getMoscowTime() });
+    db.orders.push({ id: crypto.randomUUID(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, price: currentPrice, status: 'pending', reviewed: false, date: getMoscowTime() });
     saveDB(); res.json({ message: `Заказ создан!` });
 });
 
@@ -347,8 +367,10 @@ app.get('/api/admin/data', (req, res) => {
         name: u.gameNick || u.name, 
         role: u.role || 'user',
         isBanned: u.isBanned || false,
+        banReason: u.banReason || null,
         isMuted: u.mutedUntil && (new Date().getTime() < u.mutedUntil),
-        mutedUntil: u.mutedUntil || null
+        mutedUntil: u.mutedUntil || null,
+        muteReason: u.muteReason || null
     }));
     res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news, globalChat: db.globalChat });
 });
@@ -392,7 +414,7 @@ app.post('/api/admin/complete-order', (req, res) => {
 app.post('/api/admin/reply', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const { userId, text, type } = req.body;
-    db.messages.push({ id: Date.now().toString(), userId: userId, sender: 'admin', type: type, text: text, time: getMoscowTime() });
+    db.messages.push({ id: crypto.randomUUID(), userId: userId, sender: 'admin', type: type, text: text, time: getMoscowTime() });
     saveDB(); res.json({ success: true });
 });
 
