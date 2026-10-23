@@ -48,7 +48,7 @@ const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.
 let db = { 
     users: [], inventory: { damass: 10, copper: 5, cobble: 10 }, 
     prices: { damass: 30, copper: 12, cobble: 15, sword: 50, axe: 45, pickaxe: 40, fishing_rod: 20 }, 
-    orders: [], messages: [], reviews: [], news: [], globalChat: [] 
+    orders: [], messages: [], reviews: [], news: [], globalChat: [], pinnedMsgId: null
 };
 
 if (process.env.NETRUN) {
@@ -65,6 +65,7 @@ if (fs.existsSync(DB_FILE)) {
         if (!db.reviews) db.reviews = [];
         if (!db.news) db.news = [];
         if (!db.globalChat) db.globalChat = []; 
+        if (db.pinnedMsgId === undefined) db.pinnedMsgId = null;
         if (!db.inventory) db.inventory = { damass: 10, copper: 5, cobble: 10 };
         if (!db.prices) db.prices = { damass: 30, copper: 12, cobble: 15, sword: 50, axe: 45, pickaxe: 40, fishing_rod: 20 };
     } catch (e) {} 
@@ -103,16 +104,15 @@ app.get('/api/team', (req, res) => {
     const team = db.users.filter(u => u.role && u.role !== 'user').map(u => ({
         name: u.gameNick || u.name, role: u.role, avatar: u.avatar
     }));
-    
-    // Убираем принудительное добавление, если его нет в базе, чтобы не было фантомов
     const roleOrder = { owner: 1, moder: 2, tester: 3 };
     team.sort((a, b) => (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99));
-    
     res.json(team);
 });
 
 // --- ОБЩИЙ ЧАТ ---
-app.get('/api/global-chat', (req, res) => { res.json(db.globalChat.slice(-50)); });
+app.get('/api/global-chat', (req, res) => { 
+    res.json({ messages: db.globalChat.slice(-50), pinnedMsgId: db.pinnedMsgId }); 
+});
 
 app.post('/api/global-chat', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
@@ -145,16 +145,38 @@ app.post('/api/global-chat/edit', (req, res) => {
 
 app.post('/api/global-chat/delete', (req, res) => {
     if (!req.user) return res.status(401).json({});
+    const user = db.users.find(u => u.id === req.user.id);
+    const isMod = user.role === 'moder' || user.role === 'owner';
+    
     const msgIndex = db.globalChat.findIndex(m => m.id === req.body.msgId);
-    if (msgIndex === -1 || db.globalChat[msgIndex].userId !== req.user.id) return res.status(403).json({});
-    db.globalChat.splice(msgIndex, 1); saveDB(); res.json({ success: true });
+    if (msgIndex === -1) return res.status(404).json({});
+    
+    const msg = db.globalChat[msgIndex];
+    if (msg.userId !== req.user.id && !isMod) return res.status(403).json({});
+    
+    db.globalChat.splice(msgIndex, 1); 
+    if (db.pinnedMsgId === req.body.msgId) db.pinnedMsgId = null;
+    saveDB(); 
+    res.json({ success: true });
 });
 
+app.post('/api/global-chat/pin', (req, res) => {
+    if (!req.user) return res.status(401).json({});
+    const user = db.users.find(u => u.id === req.user.id);
+    if (user.role !== 'moder' && user.role !== 'owner') return res.status(403).json({ message: 'Нет прав' });
+    
+    const msgId = req.body.msgId;
+    if (db.pinnedMsgId === msgId) db.pinnedMsgId = null;
+    else db.pinnedMsgId = msgId;
+    
+    saveDB(); res.json({ success: true });
+});
+
+// АДМИН ЧАТ
 app.post('/api/admin/global-chat/send', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const { text, replyTo } = req.body;
     if (!text) return res.status(400).json({});
-    // ТЕПЕРЬ ИМЯ БЕРЕТСЯ ИЗ БАЗЫ (Kusik)
     db.globalChat.push({ id: crypto.randomUUID(), userId: 'owner', name: 'Kusik', role: 'owner', text, replyTo: replyTo || null, edited: null, time: getMoscowTime() });
     if (db.globalChat.length > 100) db.globalChat.shift();
     saveDB(); res.json({ success: true });
@@ -169,7 +191,17 @@ app.post('/api/admin/global-chat/edit', (req, res) => {
 
 app.post('/api/admin/global-chat/delete', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
-    db.globalChat = db.globalChat.filter(m => m.id !== req.body.msgId); saveDB(); res.json({ success: true });
+    db.globalChat = db.globalChat.filter(m => m.id !== req.body.msgId); 
+    if (db.pinnedMsgId === req.body.msgId) db.pinnedMsgId = null;
+    saveDB(); res.json({ success: true });
+});
+
+app.post('/api/admin/global-chat/pin', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({});
+    const msgId = req.body.msgId;
+    if (db.pinnedMsgId === msgId) db.pinnedMsgId = null;
+    else db.pinnedMsgId = msgId;
+    saveDB(); res.json({ success: true });
 });
 
 app.post('/api/admin/chat-action', (req, res) => {
@@ -192,6 +224,31 @@ app.post('/api/admin/chat-action', (req, res) => {
     } else if (action === 'unban') {
         user.isBanned = false; user.banReason = null; user.mutedUntil = null; user.muteReason = null;
         systemMsgText = `✅ Игрок ${user.gameNick || user.name} разбанен.`;
+    }
+    
+    if (systemMsgText) {
+        db.globalChat.push({ id: crypto.randomUUID(), userId: 'system', name: 'Система', role: 'system', text: systemMsgText, replyTo: null, edited: null, time: getMoscowTime() });
+        if (db.globalChat.length > 100) db.globalChat.shift();
+    }
+    saveDB(); res.json({ success: true });
+});
+
+// Модерация для модеров из магазина
+app.post('/api/mod/chat-action', (req, res) => {
+    if (!req.user) return res.status(401).json({});
+    const modUser = db.users.find(u => u.id === req.user.id);
+    if (modUser.role !== 'moder' && modUser.role !== 'owner') return res.status(403).json({ message: 'Нет прав' });
+
+    const { userId, action, minutes, reason } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(404).json({});
+    let systemMsgText = '';
+
+    if (action === 'mute') {
+        let mins = parseInt(minutes) || 30; if (mins < 1) mins = 1; if (mins > 525600) mins = 525600;
+        user.mutedUntil = new Date().getTime() + (mins * 60000); user.muteReason = reason || null;
+        const until = new Date(user.mutedUntil).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+        systemMsgText = `🔇 Игрок ${user.gameNick || user.name} замучен до ${until}. ${reason ? 'Причина: ' + reason : ''}`;
     }
     
     if (systemMsgText) {
@@ -227,16 +284,7 @@ app.post('/api/reviews/add', (req, res) => {
     if (!req.user) return res.status(401).json({});
     const order = db.orders.find(o => o.id === req.body.orderId && o.userId === req.user.id);
     if (!order) return res.status(404).json({});
-    // ДОБАВЛЕНО orderId, теперь отзыв привязан к заказу!
-    db.reviews.push({ 
-        id: crypto.randomUUID(), 
-        userId: req.user.id, 
-        orderId: order.id, 
-        itemId: order.itemId, 
-        rating: req.body.rating, 
-        text: req.body.text, 
-        date: getMoscowTime() 
-    });
+    db.reviews.push({ id: crypto.randomUUID(), userId: req.user.id, orderId: order.id, itemId: order.itemId, rating: req.body.rating, text: req.body.text, date: getMoscowTime() });
     order.reviewed = true; saveDB(); res.json({ success: true });
 });
 
@@ -261,7 +309,6 @@ app.post('/api/chat', (req, res) => {
     db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'user', type, text, time: getMoscowTime() });
     saveDB();
     
-    // ВОЗВРАЩЕНЫ ПОЛНЫЕ ТЕКСТЫ АВТООТВЕТЧИКОВ
     let autoReply = 'Сообщение получено. Админ ответит позже.';
     if (type === 'seller') {
         autoReply = 'Сообщение отправлено продавцу. Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155';
@@ -289,11 +336,8 @@ app.post('/api/admin/login', (req, res) => {
     if (req.body.password === ADMIN_PASSWORD) { 
         req.session.isAdmin = true; 
         
-        // Ищем твой аккаунт Kusik, чтобы дать ему права владельца
         let ownerUser = db.users.find(u => u.name === 'Kusik' || u.gameNick === 'Kusik');
-        if (ownerUser) {
-            ownerUser.role = 'owner';
-        }
+        if (ownerUser) ownerUser.role = 'owner';
         
         saveDB(); res.json({ success: true }); 
     } else res.status(401).json({}); 
@@ -303,7 +347,7 @@ app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.j
 app.get('/api/admin/data', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const safeUsers = db.users.map(u => ({ id: u.id, name: u.gameNick || u.name, role: u.role || 'user', isBanned: u.isBanned || false, banReason: u.banReason || null, isMuted: u.mutedUntil && (new Date().getTime() < u.mutedUntil), mutedUntil: u.mutedUntil || null, muteReason: u.muteReason || null }));
-    res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news, globalChat: db.globalChat });
+    res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news, globalChat: db.globalChat, pinnedMsgId: db.pinnedMsgId });
 });
 app.post('/api/admin/inventory', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); let i = {}; let p = {}; for (let k in req.body.inventory) i[k] = parseInt(req.body.inventory[k]) || 0; for (let k in req.body.prices) p[k] = parseInt(req.body.prices[k]) || 0; db.inventory = i; db.prices = p; saveDB(); res.json({ success: true }); });
 app.post('/api/admin/set-role', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); const u = db.users.find(x => x.id === req.body.userId); if (u && ['user', 'tester', 'moder', 'owner'].includes(req.body.role)) { u.role = req.body.role; saveDB(); res.json({ success: true }); } else res.status(400).json({}); });
