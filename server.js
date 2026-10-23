@@ -221,13 +221,24 @@ app.get('/api/reviews/all', (req, res) => {
     allReviews.forEach(r => { if (stats[r.rating] !== undefined) stats[r.rating]++; sum += r.rating; });
     res.json({ reviews: allReviews.reverse().slice(0, 10), stats, average: total > 0 ? (sum / total).toFixed(1) : 0, total });
 });
+
 app.post('/api/reviews/add', (req, res) => {
     if (!req.user) return res.status(401).json({});
     const order = db.orders.find(o => o.id === req.body.orderId && o.userId === req.user.id);
     if (!order) return res.status(404).json({});
-    db.reviews.push({ id: crypto.randomUUID(), userId: req.user.id, itemId: order.itemId, rating: req.body.rating, text: req.body.text, date: getMoscowTime() });
+    // ДОБАВЛЕНО orderId, теперь отзыв привязан к заказу!
+    db.reviews.push({ 
+        id: crypto.randomUUID(), 
+        userId: req.user.id, 
+        orderId: order.id, 
+        itemId: order.itemId, 
+        rating: req.body.rating, 
+        text: req.body.text, 
+        date: getMoscowTime() 
+    });
     order.reviewed = true; saveDB(); res.json({ success: true });
 });
+
 app.post('/api/order/confirm-receipt', (req, res) => { if (!req.user) return res.status(401).json({}); const o = db.orders.find(x => x.id === req.body.orderId && x.userId === req.user.id); if (o && (o.status === 'delivered' || o.status === 'dispute')) { o.status = 'completed'; saveDB(); res.json({ success: true }); } else res.status(400).json({}); });
 app.post('/api/order/dispute', (req, res) => { if (!req.user) return res.status(401).json({}); const o = db.orders.find(x => x.id === req.body.orderId && x.userId === req.user.id); if (o && o.status === 'delivered') { o.status = 'dispute'; saveDB(); res.json({ success: true }); } else res.status(400).json({}); });
 app.post('/api/order/cancel', (req, res) => {
@@ -248,7 +259,15 @@ app.post('/api/chat', (req, res) => {
     const { text, type } = req.body;
     db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'user', type, text, time: getMoscowTime() });
     saveDB();
-    let autoReply = type === 'seller' ? 'Сообщение отправлено продавцу.' : 'Обращение в поддержку принято.';
+    
+    // ВОЗВРАЩЕНЫ ПОЛНЫЕ ТЕКСТЫ АВТООТВЕТЧИКОВ
+    let autoReply = 'Сообщение получено. Админ ответит позже.';
+    if (type === 'seller') {
+        autoReply = 'Сообщение отправлено продавцу (KusKusik15). Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155';
+    } else if (type === 'support') {
+        autoReply = 'Ваше обращение принято в техподдержку. Пожалуйста, опишите проблему подробнее и ожидайте ответа администратора.';
+    }
+
     setTimeout(() => { db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'admin', type, text: autoReply, time: getMoscowTime() }); saveDB(); }, 1000);
     res.json({ success: true });
 });
@@ -268,12 +287,19 @@ app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'a
 app.post('/api/admin/login', (req, res) => { 
     if (req.body.password === ADMIN_PASSWORD) { 
         req.session.isAdmin = true; 
-        let adminUser = req.user ? db.users.find(u => u.id === req.user.id) : db.users.find(u => (u.gameNick || u.name) === 'KusKusik15');
-        if (!adminUser) {
-            adminUser = { id: 'admin-owner-id', name: 'KusKusik15', gameNick: 'KusKusik15', role: 'owner', avatar: null, isBanned: false, mutedUntil: null, banReason: null, muteReason: null };
-            db.users.push(adminUser);
+        
+        // Ищем KusKusik15, если его нет - создаем, и жестко даем ему владельца.
+        let ownerUser = db.users.find(u => u.gameNick === 'KusKusik15' || u.name === 'KusKusik15');
+        if (!ownerUser) {
+            ownerUser = { 
+                id: 'admin-owner-id', name: 'KusKusik15', gameNick: 'KusKusik15', 
+                role: 'owner', avatar: null, isBanned: false, mutedUntil: null, banReason: null, muteReason: null 
+            };
+            db.users.push(ownerUser);
+        } else {
+            ownerUser.role = 'owner';
         }
-        adminUser.role = 'owner'; if (!adminUser.gameNick) adminUser.gameNick = 'KusKusik15';
+        
         saveDB(); res.json({ success: true }); 
     } else res.status(401).json({}); 
 });
