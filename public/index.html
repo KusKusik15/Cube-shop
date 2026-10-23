@@ -149,7 +149,6 @@
 
         .chat-link { color: #00d2ff; text-decoration: underline; cursor: pointer; font-weight: bold; }
 
-        /* --- ПОЛНОЭКРАННЫЙ ОБЩИЙ ЧАТ --- */
         #global-chat-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -182,7 +181,6 @@
         }
         .gc-back-btn:hover { background: #ffb703; color: #000; }
 
-        /* Баннер мута/бана в общем чате */
         .gc-ban-banner {
             background: rgba(255, 77, 77, 0.15);
             border-bottom: 1px solid #ff4d4d;
@@ -212,14 +210,12 @@
         .gc-header-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; color: #888; gap: 15px;}
         .gc-text { font-size: 15px; color: #ddd; word-break: break-word; line-height: 1.4;}
         
-        /* Анимация появления ТОЛЬКО при первом появлении (без мигания) */
         @keyframes gcFirstShow {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .gc-msg.gc-new { animation: gcFirstShow 0.35s ease-out; }
 
-        /* Пульсация свечения для владельца (не дёргает раскладку) */
         @keyframes ownerGlow {
             0%, 100% { box-shadow: 0 0 8px rgba(255, 183, 3, 0.3), 0 0 15px rgba(255, 183, 3, 0.15); border-color: rgba(255, 183, 3, 0.6); }
             50% { box-shadow: 0 0 15px rgba(255, 183, 3, 0.7), 0 0 30px rgba(255, 183, 3, 0.4); border-color: rgba(255, 183, 3, 1); }
@@ -607,8 +603,8 @@
         let notificationInterval = null;
         let globalChatInterval = null;
         let chatCheckInterval = null;
+        let lastGlobalId = null;
 
-        // Для кружочков: запоминаем, что уже видели
         let seenCounts = { seller: 0, support: 0, global: 0 };
 
         function loadSeenCounts() {
@@ -731,10 +727,8 @@
             } catch(e) {}
         }
 
-        // Проверка кружочков у чатов
         async function checkChatBadges() {
             try {
-                // Личные чаты — считаем непрочитанные от админа
                 const chatRes = await fetch('/api/chat');
                 if (chatRes.ok) {
                     const msgs = await chatRes.json();
@@ -754,7 +748,6 @@
                     else { supportBadge.style.display = 'none'; }
                 }
 
-                // Общий чат
                 const gcRes = await fetch('/api/global-chat');
                 if (gcRes.ok) {
                     const gcMsgs = await gcRes.json();
@@ -1028,7 +1021,6 @@
             currentChatMode = mode;
             document.getElementById('chat-title').innerText = mode === 'seller' ? '💬 Чат с продавцом' : '🆘 Поддержка';
             document.getElementById('chatModal').style.display = 'flex'; loadChat();
-            // Помечаем, что прочитали
             markChatSeen(mode);
         }
 
@@ -1064,11 +1056,10 @@
         function openGlobalChat() {
             document.getElementById('global-chat-screen').style.display = 'flex';
             document.body.style.overflow = 'hidden';
-            loadGlobalChat();
+            loadGlobalChat(true);
             if(globalChatInterval) clearInterval(globalChatInterval);
             globalChatInterval = setInterval(loadGlobalChat, 3000);
             if (window.innerWidth < 800) toggleSidebar();
-            // Помечаем, что прочитали
             markGlobalSeen();
             updateMuteBanner();
         }
@@ -1091,7 +1082,6 @@
             } catch(e) {}
         }
 
-        // Баннер мута в общем чате
         async function updateMuteBanner() {
             const banner = document.getElementById('gc-ban-banner');
             const input = document.getElementById('gc-input');
@@ -1124,20 +1114,23 @@
             } catch(e) {}
         }
 
-        async function loadGlobalChat() {
+        // forceReload = true — перерисовать принудительно (после отправки)
+        async function loadGlobalChat(forceReload = false) {
             const res = await fetch('/api/global-chat');
             if (res.ok) {
                 const msgs = await res.json();
                 const box = document.getElementById('gc-box');
                 
-                // Проверяем, есть ли новые сообщения — чтобы не мигало
+                const currentLastId = msgs.length > 0 ? msgs[msgs.length - 1].id : null;
+                const nothingChanged = !forceReload && currentLastId === lastGlobalId && box.children.length > 0;
+                
+                if (nothingChanged) return;
+                
                 const prevCount = box.children.length;
                 const isFirstLoad = prevCount === 0;
-                const hasNew = msgs.length > prevCount;
-                
-                if (!hasNew && !isFirstLoad) return; // Ничего не поменялось — не перерисовываем
                 
                 box.innerHTML = '';
+                lastGlobalId = currentLastId;
                 
                 msgs.forEach((m, idx) => {
                     let roleClass = 'role-user';
@@ -1154,7 +1147,6 @@
                         badge = `<span class="gc-badge tester">ТЕСТЕР</span>`;
                     }
 
-                    // Анимацию появления — только у новых (последних) сообщений
                     const isNew = isFirstLoad || idx >= prevCount;
                     const animClass = isNew ? 'gc-new' : '';
 
@@ -1189,7 +1181,9 @@
                 return;
             }
             
-            loadGlobalChat();
+            // Принудительно перерисовываем, чтобы сразу увидеть своё сообщение
+            await loadGlobalChat(true);
+            markGlobalSeen();
         }
     </script>
 </body>
