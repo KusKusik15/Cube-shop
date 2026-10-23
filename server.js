@@ -103,38 +103,28 @@ app.get('/api/team', (req, res) => {
     const team = db.users.filter(u => u.role && u.role !== 'user').map(u => ({
         name: u.gameNick || u.name, role: u.role, avatar: u.avatar
     }));
-    
     if (!team.some(t => t.role === 'owner')) {
         team.push({ name: 'KusKusik15', role: 'owner', avatar: null });
     }
-    
     const roleOrder = { owner: 1, moder: 2, tester: 3 };
     team.sort((a, b) => (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99));
-    
     res.json(team);
 });
 
 // --- ОБЩИЙ ЧАТ ---
-app.get('/api/global-chat', (req, res) => {
-    res.json(db.globalChat.slice(-50));
-});
+app.get('/api/global-chat', (req, res) => { res.json(db.globalChat.slice(-50)); });
 
 app.post('/api/global-chat', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const user = db.users.find(u => u.id === req.user.id);
-    
-    if (user.isBanned) return res.status(403).json({ message: 'Вы забанены в чате.' + (user.banReason ? ' Причина: ' + user.banReason : ''), reason: user.banReason });
+    if (user.isBanned) return res.status(403).json({ message: 'Вы забанены в чате.' });
     if (user.mutedUntil) {
         const now = new Date().getTime();
-        if (now < user.mutedUntil) {
-            const remainingMinutes = Math.ceil((user.mutedUntil - now) / 60000);
-            return res.status(403).json({ message: `У вас мут еще на ${remainingMinutes} мин.` + (user.muteReason ? ' Причина: ' + user.muteReason : ''), reason: user.muteReason, mutedUntil: user.mutedUntil });
-        } else { user.mutedUntil = null; user.muteReason = null; saveDB(); }
+        if (now < user.mutedUntil) return res.status(403).json({ message: `У вас мут еще на ${Math.ceil((user.mutedUntil - now) / 60000)} мин.` });
+        else { user.mutedUntil = null; user.muteReason = null; saveDB(); }
     }
-
     const { text, replyTo } = req.body;
     if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
-
     db.globalChat.push({
         id: crypto.randomUUID(), userId: req.user.id, name: user.gameNick || user.name,
         role: user.role || 'user', text: text, replyTo: replyTo || null, edited: null, time: getMoscowTime()
@@ -145,163 +135,85 @@ app.post('/api/global-chat', (req, res) => {
 });
 
 app.post('/api/global-chat/edit', (req, res) => {
-    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    if (!req.user) return res.status(401).json({});
     const { msgId, text } = req.body;
     const msg = db.globalChat.find(m => m.id === msgId);
-    
-    if (!msg) return res.status(404).json({ message: 'Сообщение не найдено' });
-    if (msg.userId !== req.user.id) return res.status(403).json({ message: 'Это не ваше сообщение' });
-    if (!canEdit(msg.time)) return res.status(403).json({ message: 'Прошло больше часа, редактирование недоступно' });
-    
-    msg.text = text;
-    msg.edited = getMoscowTime();
-    saveDB();
-    res.json({ success: true });
+    if (!msg || msg.userId !== req.user.id) return res.status(403).json({});
+    if (!canEdit(msg.time)) return res.status(403).json({ message: 'Прошло больше часа' });
+    msg.text = text; msg.edited = getMoscowTime(); saveDB(); res.json({ success: true });
 });
 
 app.post('/api/global-chat/delete', (req, res) => {
-    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
-    const { msgId } = req.body;
-    const msgIndex = db.globalChat.findIndex(m => m.id === msgId);
-    
-    if (msgIndex === -1) return res.status(404).json({ message: 'Сообщение не найдено' });
-    if (db.globalChat[msgIndex].userId !== req.user.id) return res.status(403).json({ message: 'Это не ваше сообщение' });
-    
-    db.globalChat.splice(msgIndex, 1);
-    saveDB();
-    res.json({ success: true });
+    if (!req.user) return res.status(401).json({});
+    const msgIndex = db.globalChat.findIndex(m => m.id === req.body.msgId);
+    if (msgIndex === -1 || db.globalChat[msgIndex].userId !== req.user.id) return res.status(403).json({});
+    db.globalChat.splice(msgIndex, 1); saveDB(); res.json({ success: true });
 });
 
 app.post('/api/admin/global-chat/send', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    if (!req.session.isAdmin) return res.status(401).json({});
     const { text, replyTo } = req.body;
-    if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
-
-    db.globalChat.push({
-        id: crypto.randomUUID(), userId: 'owner', name: 'KusKusik15',
-        role: 'owner', text: text, replyTo: replyTo || null, edited: null, time: getMoscowTime()
-    });
+    if (!text) return res.status(400).json({});
+    db.globalChat.push({ id: crypto.randomUUID(), userId: 'owner', name: 'KusKusik15', role: 'owner', text, replyTo: replyTo || null, edited: null, time: getMoscowTime() });
     if (db.globalChat.length > 100) db.globalChat.shift();
-    saveDB();
-    res.json({ success: true });
+    saveDB(); res.json({ success: true });
 });
 
 app.post('/api/admin/global-chat/edit', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    const { msgId, text } = req.body;
-    const msg = db.globalChat.find(m => m.id === msgId);
-    if (!msg) return res.status(404).json({ message: 'Сообщение не найдено' });
-    
-    msg.text = text;
-    msg.edited = getMoscowTime();
-    saveDB();
-    res.json({ success: true });
+    if (!req.session.isAdmin) return res.status(401).json({});
+    const msg = db.globalChat.find(m => m.id === req.body.msgId);
+    if (msg) { msg.text = req.body.text; msg.edited = getMoscowTime(); saveDB(); res.json({ success: true }); }
+    else res.status(404).json({});
 });
 
 app.post('/api/admin/global-chat/delete', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    db.globalChat = db.globalChat.filter(m => m.id !== req.body.msgId);
-    saveDB();
-    res.json({ success: true });
+    if (!req.session.isAdmin) return res.status(401).json({});
+    db.globalChat = db.globalChat.filter(m => m.id !== req.body.msgId); saveDB(); res.json({ success: true });
 });
 
 app.post('/api/admin/chat-action', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    if (!req.session.isAdmin) return res.status(401).json({});
     const { userId, action, minutes, reason } = req.body;
     const user = db.users.find(u => u.id === userId);
-    
-    if (!user) return res.status(404).json({ message: 'Юзер не найден' });
-
+    if (!user) return res.status(404).json({});
     let systemMsgText = '';
 
     if (action === 'mute') {
-        let mins = parseInt(minutes) || 30;
-        if (mins < 1) mins = 1;
-        if (mins > 525600) mins = 525600;
-        user.mutedUntil = new Date().getTime() + (mins * 60000);
-        user.muteReason = reason || null;
-        
+        let mins = parseInt(minutes) || 30; if (mins < 1) mins = 1; if (mins > 525600) mins = 525600;
+        user.mutedUntil = new Date().getTime() + (mins * 60000); user.muteReason = reason || null;
         const until = new Date(user.mutedUntil).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
         systemMsgText = `🔇 Игрок ${user.gameNick || user.name} замучен до ${until}. ${reason ? 'Причина: ' + reason : ''}`;
     } else if (action === 'unmute') {
-        user.mutedUntil = null;
-        user.muteReason = null;
-        systemMsgText = `🔊 Игрок ${user.gameNick || user.name} размучен.`;
+        user.mutedUntil = null; user.muteReason = null; systemMsgText = `🔊 Игрок ${user.gameNick || user.name} размучен.`;
     } else if (action === 'ban') {
-        user.isBanned = true;
-        user.banReason = reason || null;
-        user.mutedUntil = null;
-        user.muteReason = null;
+        user.isBanned = true; user.banReason = reason || null; user.mutedUntil = null; user.muteReason = null;
         systemMsgText = `🚫 Игрок ${user.gameNick || user.name} забанен. ${reason ? 'Причина: ' + reason : ''}`;
     } else if (action === 'unban') {
-        user.isBanned = false;
-        user.banReason = null;
-        user.mutedUntil = null;
-        user.muteReason = null;
+        user.isBanned = false; user.banReason = null; user.mutedUntil = null; user.muteReason = null;
         systemMsgText = `✅ Игрок ${user.gameNick || user.name} разбанен.`;
     }
     
     if (systemMsgText) {
-        db.globalChat.push({
-            id: crypto.randomUUID(), userId: 'system', name: 'Система', role: 'system',
-            text: systemMsgText, replyTo: null, edited: null, time: getMoscowTime()
-        });
+        db.globalChat.push({ id: crypto.randomUUID(), userId: 'system', name: 'Система', role: 'system', text: systemMsgText, replyTo: null, edited: null, time: getMoscowTime() });
         if (db.globalChat.length > 100) db.globalChat.shift();
     }
-
-    saveDB();
-    res.json({ success: true });
+    saveDB(); res.json({ success: true });
 });
 
 // --- НОВОСТИ ---
 app.get('/api/news', (req, res) => { res.json([...db.news].sort((a,b) => (b.pinned?1:0) - (a.pinned?1:0))); });
-app.post('/api/admin/news', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const { title, content } = req.body;
-    db.news.unshift({ id: crypto.randomUUID(), title, content, date: getMoscowTime(), edited: null, pinned: false }); 
-    saveDB(); res.json({ success: true });
-});
-app.post('/api/admin/news/edit', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const { id, title, content } = req.body; const newsItem = db.news.find(n => n.id === id);
-    if (newsItem) { newsItem.title = title; newsItem.content = content; newsItem.edited = getMoscowTime(); saveDB(); res.json({ success: true }); } else { res.status(404).json({}); }
-});
-app.post('/api/admin/news/pin', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const { id } = req.body; const newsItem = db.news.find(n => n.id === id);
-    if (newsItem) { if (!newsItem.pinned) { db.news.forEach(n => n.pinned = false); newsItem.pinned = true; } else { newsItem.pinned = false; } saveDB(); res.json({ success: true }); }
-});
+app.post('/api/admin/news', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); db.news.unshift({ id: crypto.randomUUID(), title: req.body.title, content: req.body.content, date: getMoscowTime(), edited: null, pinned: false }); saveDB(); res.json({ success: true }); });
+app.post('/api/admin/news/edit', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); const n = db.news.find(x => x.id === req.body.id); if (n) { n.title = req.body.title; n.content = req.body.content; n.edited = getMoscowTime(); saveDB(); res.json({ success: true }); } else res.status(404).json({}); });
+app.post('/api/admin/news/pin', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); const n = db.news.find(x => x.id === req.body.id); if (n) { if (!n.pinned) { db.news.forEach(x => x.pinned = false); n.pinned = true; } else n.pinned = false; saveDB(); res.json({ success: true }); } });
 app.post('/api/admin/news/delete', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); db.news = db.news.filter(n => n.id !== req.body.id); saveDB(); res.json({ success: true }); });
 
 // --- ПРОФИЛЬ ---
-app.post('/api/profile/update', (req, res) => {
-    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
-    const { gameNick, avatar } = req.body;
-    const user = db.users.find(u => u.id === req.user.id);
-    if (gameNick !== undefined) user.gameNick = gameNick;
-    if (avatar !== undefined) user.avatar = avatar;
-    saveDB(); res.json({ message: 'Профиль обновлен' });
-});
-app.post('/api/profile/password', async (req, res) => {
-    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
-    const { oldPass, newPass } = req.body;
-    const user = db.users.find(u => u.id === req.user.id);
-    if (user.password) { const isMatch = await bcrypt.compare(oldPass, user.password); if (!isMatch) return res.status(400).json({ message: 'Старый пароль неверный' }); }
-    user.password = await bcrypt.hash(newPass, 10); saveDB(); res.json({ message: 'Пароль изменен' });
-});
+app.post('/api/profile/update', (req, res) => { if (!req.user) return res.status(401).json({}); const u = db.users.find(x => x.id === req.user.id); if (req.body.gameNick !== undefined) u.gameNick = req.body.gameNick; if (req.body.avatar !== undefined) u.avatar = req.body.avatar; saveDB(); res.json({ message: 'ОК' }); });
+app.post('/api/profile/password', async (req, res) => { if (!req.user) return res.status(401).json({}); const u = db.users.find(x => x.id === req.user.id); if (u.password) { if (!(await bcrypt.compare(req.body.oldPass, u.password))) return res.status(400).json({ message: 'Старый пароль неверный' }); } u.password = await bcrypt.hash(req.body.newPass, 10); saveDB(); res.json({ message: 'ОК' }); });
 
 // --- ЗАКАЗЫ И ЧАТЫ ---
-app.get('/api/orders', (req, res) => { 
-    if (!req.user) return res.status(401).json({}); 
-    res.json(db.orders.filter(o => o.userId === req.user.id)); 
-});
-
-// Обновленный эндпоинт для получения СВОИХ отзывов
-app.get('/api/my-reviews', (req, res) => {
-    if (!req.user) return res.status(401).json({});
-    const myReviews = db.reviews.filter(r => r.userId === req.user.id);
-    res.json(myReviews);
-});
+app.get('/api/orders', (req, res) => { if (!req.user) return res.status(401).json({}); res.json(db.orders.filter(o => o.userId === req.user.id)); });
+app.get('/api/my-reviews', (req, res) => { if (!req.user) return res.status(401).json({}); res.json(db.reviews.filter(r => r.userId === req.user.id)); });
 
 app.get('/api/reviews/all', (req, res) => {
     const allReviews = db.reviews.map(r => { const user = db.users.find(u => u.id === r.userId); return { id: r.id, userName: user ? (user.gameNick || 'Игрок') : 'Аноним', rating: r.rating, text: r.text, itemId: r.itemId, date: r.date }; });
@@ -309,80 +221,42 @@ app.get('/api/reviews/all', (req, res) => {
     allReviews.forEach(r => { if (stats[r.rating] !== undefined) stats[r.rating]++; sum += r.rating; });
     res.json({ reviews: allReviews.reverse().slice(0, 10), stats, average: total > 0 ? (sum / total).toFixed(1) : 0, total });
 });
-
 app.post('/api/reviews/add', (req, res) => {
-    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
-    const { orderId, rating, text } = req.body;
-    const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
-    if (!order) return res.status(404).json({ message: 'Заказ не найден' });
-    db.reviews.push({ id: crypto.randomUUID(), userId: req.user.id, itemId: order.itemId, rating, text, date: getMoscowTime() });
+    if (!req.user) return res.status(401).json({});
+    const order = db.orders.find(o => o.id === req.body.orderId && o.userId === req.user.id);
+    if (!order) return res.status(404).json({});
+    db.reviews.push({ id: crypto.randomUUID(), userId: req.user.id, itemId: order.itemId, rating: req.body.rating, text: req.body.text, date: getMoscowTime() });
     order.reviewed = true; saveDB(); res.json({ success: true });
 });
-app.post('/api/order/confirm-receipt', (req, res) => {
-    if (!req.user) return res.status(401).json({});
-    const order = db.orders.find(o => o.id === req.body.orderId && o.userId === req.user.id);
-    if (order && (order.status === 'delivered' || order.status === 'dispute')) { order.status = 'completed'; saveDB(); res.json({ success: true }); } else { res.status(400).json({}); }
-});
-app.post('/api/order/dispute', (req, res) => {
-    if (!req.user) return res.status(401).json({});
-    const order = db.orders.find(o => o.id === req.body.orderId && o.userId === req.user.id);
-    if (order && order.status === 'delivered') { order.status = 'dispute'; saveDB(); res.json({ success: true }); } else { res.status(400).json({}); }
-});
+app.post('/api/order/confirm-receipt', (req, res) => { if (!req.user) return res.status(401).json({}); const o = db.orders.find(x => x.id === req.body.orderId && x.userId === req.user.id); if (o && (o.status === 'delivered' || o.status === 'dispute')) { o.status = 'completed'; saveDB(); res.json({ success: true }); } else res.status(400).json({}); });
+app.post('/api/order/dispute', (req, res) => { if (!req.user) return res.status(401).json({}); const o = db.orders.find(x => x.id === req.body.orderId && x.userId === req.user.id); if (o && o.status === 'delivered') { o.status = 'dispute'; saveDB(); res.json({ success: true }); } else res.status(400).json({}); });
 app.post('/api/order/cancel', (req, res) => {
     if (!req.user) return res.status(401).json({});
-    const order = db.orders.find(o => o.id === req.body.orderId && o.userId === req.user.id);
-    if (order) {
-        if (order.status === 'pending' || order.status === 'delivered') order.status = 'cancelled_by_user';
-        else if (order.status === 'dispute') order.status = 'cancelled_by_dispute';
+    const o = db.orders.find(x => x.id === req.body.orderId && x.userId === req.user.id);
+    if (o) {
+        if (o.status === 'pending' || o.status === 'delivered') o.status = 'cancelled_by_user';
+        else if (o.status === 'dispute') o.status = 'cancelled_by_dispute';
         else return res.status(400).json({});
-        order.cancelDate = getMoscowTime(); db.inventory[order.itemId] = (db.inventory[order.itemId] || 0) + order.qty;
+        o.cancelDate = getMoscowTime(); db.inventory[o.itemId] = (db.inventory[o.itemId] || 0) + o.qty;
         saveDB(); res.json({ success: true });
-    } else { res.status(400).json({}); }
+    } else res.status(400).json({});
 });
 
 app.get('/api/chat', (req, res) => { if (!req.user) return res.status(401).json({}); res.json(db.messages.filter(m => m.userId === req.user.id)); });
 app.post('/api/chat', (req, res) => {
     if (!req.user) return res.status(401).json({});
     const { text, type } = req.body;
-    db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'user', type: type, text: text, time: getMoscowTime() });
+    db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'user', type, text, time: getMoscowTime() });
     saveDB();
-
-    let autoReply = 'Сообщение получено. Админ ответит позже.';
-    if (type === 'seller') autoReply = 'Сообщение отправлено продавцу (KusKusik15). Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155';
-    else if (type === 'support') autoReply = 'Ваше обращение принято в техподдержку. Пожалуйста, опишите проблему подробнее и ожидайте ответа администратора.';
-
-    setTimeout(() => { db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'admin', type: type, text: autoReply, time: getMoscowTime() }); saveDB(); }, 1000);
+    let autoReply = type === 'seller' ? 'Сообщение отправлено продавцу.' : 'Обращение в поддержку принято.';
+    setTimeout(() => { db.messages.push({ id: crypto.randomUUID(), userId: req.user.id, sender: 'admin', type, text: autoReply, time: getMoscowTime() }); saveDB(); }, 1000);
     res.json({ success: true });
 });
 
 app.get('/api/inventory', (req, res) => { res.json({ inventory: db.inventory, prices: db.prices || {} }); });
-
-app.post('/api/register', async (req, res) => {
-    const { login, password, gameNick } = req.body;
-    if (db.users.find(u => u.name === login)) return res.status(400).json({ message: 'Логин занят!' });
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick: gameNick, avatar: null, role: 'user', mutedUntil: null, muteReason: null, isBanned: false, banReason: null };
-    db.users.push(newUser); saveDB();
-    req.login(newUser, (err) => { if (err) return res.status(500).json({}); res.json({ message: 'Успешно!' }); });
-});
-app.post('/api/login', async (req, res) => {
-    const { login, password } = req.body;
-    const user = db.users.find(u => u.name === login);
-    if (!user || !user.password) return res.status(400).json({ message: 'Неверный логин/пароль' });
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Неверный логин/пароль' });
-    req.login(user, (err) => { if (err) return res.status(500).json({}); res.json({ message: 'Успешно!' }); });
-});
-
-app.post('/api/order', (req, res) => {
-    if (!req.user) return res.status(401).json({});
-    const { itemId, qty, gameNick, currency } = req.body;
-    if (!db.inventory[itemId] || db.inventory[itemId] < qty) return res.status(400).json({ message: 'Нет в наличии!' });
-    const currentPrice = (db.prices && db.prices[itemId]) ? parseInt(db.prices[itemId]) : 0;
-    db.inventory[itemId] -= qty;
-    db.orders.push({ id: crypto.randomUUID(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, price: currentPrice, status: 'pending', reviewed: false, date: getMoscowTime() });
-    saveDB(); res.json({ message: `Заказ создан!` });
-});
+app.post('/api/register', async (req, res) => { const { login, password, gameNick } = req.body; if (db.users.find(u => u.name === login)) return res.status(400).json({ message: 'Занят' }); const u = { id: Date.now().toString(), name: login, password: await bcrypt.hash(password, 10), gameNick, avatar: null, role: 'user', mutedUntil: null, muteReason: null, isBanned: false, banReason: null }; db.users.push(u); saveDB(); req.login(u, () => res.json({ message: 'ОК' })); });
+app.post('/api/login', async (req, res) => { const u = db.users.find(x => x.name === req.body.login); if (!u || !u.password || !(await bcrypt.compare(req.body.password, u.password))) return res.status(400).json({ message: 'Неверно' }); req.login(u, () => res.json({ message: 'ОК' })); });
+app.post('/api/order', (req, res) => { if (!req.user) return res.status(401).json({}); const { itemId, qty, gameNick } = req.body; if (!db.inventory[itemId] || db.inventory[itemId] < qty) return res.status(400).json({ message: 'Нет в наличии' }); const price = (db.prices && db.prices[itemId]) ? parseInt(db.prices[itemId]) : 0; db.inventory[itemId] -= qty; db.orders.push({ id: crypto.randomUUID(), userId: req.user.id, buyerNick: gameNick, itemId, qty, price, status: 'pending', reviewed: false, date: getMoscowTime() }); saveDB(); res.json({ message: 'ОК' }); });
 
 app.get('/auth/yandex', passport.authenticate('yandex'));
 app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
@@ -391,79 +265,29 @@ app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return n
 // --- АДМИНКА ---
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
-
 app.post('/api/admin/login', (req, res) => { 
     if (req.body.password === ADMIN_PASSWORD) { 
         req.session.isAdmin = true; 
-        
-        let adminUser = null;
-        if (req.user) {
-            adminUser = db.users.find(u => u.id === req.user.id);
-        } else {
-            adminUser = db.users.find(u => (u.gameNick || u.name) === 'KusKusik15');
-            if (!adminUser) {
-                adminUser = { 
-                    id: 'admin-owner-id', name: 'KusKusik15', gameNick: 'KusKusik15', 
-                    role: 'owner', avatar: null, isBanned: false, mutedUntil: null, banReason: null, muteReason: null 
-                };
-                db.users.push(adminUser);
-            }
+        let adminUser = req.user ? db.users.find(u => u.id === req.user.id) : db.users.find(u => (u.gameNick || u.name) === 'KusKusik15');
+        if (!adminUser) {
+            adminUser = { id: 'admin-owner-id', name: 'KusKusik15', gameNick: 'KusKusik15', role: 'owner', avatar: null, isBanned: false, mutedUntil: null, banReason: null, muteReason: null };
+            db.users.push(adminUser);
         }
-
-        if (adminUser && adminUser.role !== 'owner') adminUser.role = 'owner';
-        if (adminUser && !adminUser.gameNick) adminUser.gameNick = 'KusKusik15';
-        
-        saveDB();
-        res.json({ success: true }); 
-    } else { 
-        res.status(401).json({}); 
-    } 
+        adminUser.role = 'owner'; if (!adminUser.gameNick) adminUser.gameNick = 'KusKusik15';
+        saveDB(); res.json({ success: true }); 
+    } else res.status(401).json({}); 
 });
-
 app.get('/api/admin/check', (req, res) => { res.json({ isAdmin: req.session.isAdmin === true }); });
 app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.json({ success: true }); });
-
 app.get('/api/admin/data', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
-    const safeUsers = db.users.map(u => ({ 
-        id: u.id, name: u.gameNick || u.name, role: u.role || 'user',
-        isBanned: u.isBanned || false, banReason: u.banReason || null,
-        isMuted: u.mutedUntil && (new Date().getTime() < u.mutedUntil), mutedUntil: u.mutedUntil || null, muteReason: u.muteReason || null
-    }));
+    const safeUsers = db.users.map(u => ({ id: u.id, name: u.gameNick || u.name, role: u.role || 'user', isBanned: u.isBanned || false, banReason: u.banReason || null, isMuted: u.mutedUntil && (new Date().getTime() < u.mutedUntil), mutedUntil: u.mutedUntil || null, muteReason: u.muteReason || null }));
     res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news, globalChat: db.globalChat });
 });
-
-app.post('/api/admin/inventory', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    let newInv = {}; let newPrices = {};
-    for (let key in req.body.inventory) newInv[key] = parseInt(req.body.inventory[key]) || 0;
-    for (let key in req.body.prices) newPrices[key] = parseInt(req.body.prices[key]) || 0;
-    db.inventory = newInv; db.prices = newPrices; saveDB(); res.json({ success: true });
-});
-
-app.post('/api/admin/set-role', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    const { userId, role } = req.body;
-    const allowedRoles = ['user', 'tester', 'moder', 'owner'];
-    if (!allowedRoles.includes(role)) return res.status(400).json({ message: 'Неверная роль' });
-    const user = db.users.find(u => u.id === userId);
-    if (!user) return res.status(404).json({ message: 'Юзер не найден' });
-    user.role = role; saveDB(); res.json({ success: true });
-});
-
-app.post('/api/admin/complete-order', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const order = db.orders.find(o => o.id === req.body.orderId);
-    if (order) { order.status = 'delivered'; saveDB(); res.json({ success: true }); } else { res.status(404).json({}); }
-});
-
-app.post('/api/admin/reply', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const { userId, text, type } = req.body;
-    db.messages.push({ id: crypto.randomUUID(), userId: userId, sender: 'admin', type: type, text: text, time: getMoscowTime() });
-    saveDB(); res.json({ success: true });
-});
-
+app.post('/api/admin/inventory', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); let i = {}; let p = {}; for (let k in req.body.inventory) i[k] = parseInt(req.body.inventory[k]) || 0; for (let k in req.body.prices) p[k] = parseInt(req.body.prices[k]) || 0; db.inventory = i; db.prices = p; saveDB(); res.json({ success: true }); });
+app.post('/api/admin/set-role', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); const u = db.users.find(x => x.id === req.body.userId); if (u && ['user', 'tester', 'moder', 'owner'].includes(req.body.role)) { u.role = req.body.role; saveDB(); res.json({ success: true }); } else res.status(400).json({}); });
+app.post('/api/admin/complete-order', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); const o = db.orders.find(x => x.id === req.body.orderId); if (o) { o.status = 'delivered'; saveDB(); res.json({ success: true }); } else res.status(404).json({}); });
+app.post('/api/admin/reply', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); db.messages.push({ id: crypto.randomUUID(), userId: req.body.userId, sender: 'admin', type: req.body.type, text: req.body.text, time: getMoscowTime() }); saveDB(); res.json({ success: true }); });
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
 const PORT = process.env.PORT || 3000;
