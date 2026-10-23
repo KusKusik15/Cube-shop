@@ -149,7 +149,7 @@
 
         .chat-link { color: #00d2ff; text-decoration: underline; cursor: pointer; font-weight: bold; }
 
-        /* --- СТИЛИ ДЛЯ ПОЛНОЭКРАННОГО ОБЩЕГО ЧАТА --- */
+        /* --- ПОЛНОЭКРАННЫЙ ОБЩИЙ ЧАТ --- */
         #global-chat-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -194,13 +194,36 @@
             width: 100%;
         }
 
-        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333;}
+        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333; animation: gcFadeIn 0.35s ease-out;}
         .gc-header-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; color: #888; gap: 15px;}
         .gc-text { font-size: 15px; color: #ddd; word-break: break-word; line-height: 1.4;}
         
-        /* Владелец */
-        .role-owner { border: 1px solid #ffb703; box-shadow: 0 0 10px rgba(255,183,3,0.2); background: linear-gradient(90deg, rgba(255,183,3,0.1) 0%, rgba(15,36,66,1) 100%); }
-        .role-owner .gc-name { color: #ffb703; font-weight: 800; text-shadow: 0 0 5px rgba(255,183,3,0.5); }
+        /* Анимация появления сообщений */
+        @keyframes gcFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Анимация пульсирующего золотого свечения для владельца */
+        @keyframes ownerGlow {
+            0%, 100% { 
+                box-shadow: 0 0 8px rgba(255, 183, 3, 0.3), 0 0 15px rgba(255, 183, 3, 0.15);
+                border-color: rgba(255, 183, 3, 0.6);
+            }
+            50% { 
+                box-shadow: 0 0 15px rgba(255, 183, 3, 0.7), 0 0 30px rgba(255, 183, 3, 0.4);
+                border-color: rgba(255, 183, 3, 1);
+            }
+        }
+
+        /* Владелец — с анимацией */
+        .role-owner { 
+            border: 1px solid #ffb703; 
+            background: linear-gradient(90deg, rgba(255,183,3,0.12) 0%, rgba(15,36,66,1) 100%); 
+            animation: gcFadeIn 0.35s ease-out, ownerGlow 2.5s ease-in-out infinite;
+        }
+        .role-owner .gc-name { color: #ffb703; font-weight: 800; text-shadow: 0 0 8px rgba(255,183,3,0.7); }
+        
         /* Модер */
         .role-moder { border: 1px solid #ff4d4d; }
         .role-moder .gc-name { color: #ff4d4d; font-weight: 800; }
@@ -279,7 +302,6 @@
             .rating-bars { width: 100%; }
             .reviews-section { padding: 15px; }
             
-            /* Мобильный чат */
             .gc-messages-container { padding: 10px; gap: 10px;}
             .gc-msg { max-width: 95%; padding: 10px; }
             .gc-input-area { padding: 10px; }
@@ -299,7 +321,6 @@
         <div class="sidebar-menu">
             <div class="menu-item active" onclick="filterCategory('all', this)">Главная</div>
             
-            <!-- КНОПКА ОБЩЕГО ЧАТА В МЕНЮ -->
             <div class="menu-item" onclick="openGlobalChat()" style="color: #ffb703; font-weight: bold;">🗣️ Общий чат</div>
             
             <div class="menu-item" onclick="toggleSubmenu('armor-submenu', this)"><span>Броня</span> <span>▼</span></div>
@@ -431,7 +452,6 @@
         <button class="footer-btn" onclick="openChatModal('support')">🆘 Поддержка</button>
     </footer>
 
-    <!-- ПОЛНОЭКРАННЫЙ ОБЩИЙ ЧАТ -->
     <div id="global-chat-screen">
         <div class="gc-header">
             <div class="gc-title">🗣️ Общий чат</div>
@@ -446,7 +466,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКИ -->
     <div class="modal-overlay" id="confirmModal">
         <div class="modal">
             <h3 style="font-size: 24px;">Подтверждение</h3>
@@ -949,7 +968,6 @@
             loadChat(); setTimeout(loadChat, 1500); 
         }
 
-        // --- ЛОГИКА ПОЛНОЭКРАННОГО ОБЩЕГО ЧАТА ---
         function openGlobalChat() {
             document.getElementById('global-chat-screen').style.display = 'flex';
             document.body.style.overflow = 'hidden';
