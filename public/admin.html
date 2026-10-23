@@ -29,7 +29,7 @@
 
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px;}
-        .panel h3 { margin-bottom: 15px; color: #aaa; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+        .panel h3 { margin-bottom: 15px; color: #aaa; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;}
 
         .inv-category { margin-bottom: 20px; }
         .inv-category-title { color: var(--blue); font-weight: bold; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px;}
@@ -120,6 +120,14 @@
         .team-admin-info { font-size: 14px; font-weight: bold;}
         .team-admin-role { font-size: 11px; color: #888; text-transform: uppercase;}
 
+        /* ОТЗЫВЫ В АДМИНКЕ */
+        .review-admin-card { background: #000; border: 1px solid #222; border-left: 3px solid var(--gold); padding: 15px; border-radius: 5px; margin-bottom: 10px;}
+        .review-admin-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px;}
+        .review-admin-user { font-weight: bold; color: #fff;}
+        .review-admin-stars { color: #ffb703;}
+        .review-admin-text { font-size: 14px; color: #ddd; margin-bottom: 5px;}
+        .review-admin-date { font-size: 11px; color: #666; text-align: right;}
+
         /* МОДАЛЬНЫЕ ОКНА */
         .admin-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -142,6 +150,7 @@
             box-shadow: 0 10px 40px rgba(0, 210, 255, 0.2);
             animation: modalIn 0.25s ease-out;
         }
+        .admin-modal.huge { max-width: 900px; width: 95%; height: 90vh; display: flex; flex-direction: column; text-align: left;}
         @keyframes modalIn {
             from { opacity: 0; transform: scale(0.9) translateY(-10px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
@@ -151,7 +160,7 @@
         .admin-modal b { color: #fff; }
         .admin-modal .role-highlight { color: var(--gold); font-weight: 800; }
         .admin-modal textarea { width: 100%; margin-bottom: 15px; }
-        .admin-modal-btns { display: flex; gap: 10px; }
+        .admin-modal-btns { display: flex; gap: 10px; margin-top: 15px;}
         .admin-modal-btns button { flex: 1; padding: 12px; font-size: 14px; }
         .admin-modal-btns .btn-cancel-modal { background: transparent; border: 1px solid #666; color: #aaa; }
         .admin-modal-btns .btn-confirm-modal { background: var(--green); }
@@ -216,6 +225,11 @@
                 <div class="panel">
                     <h3>👥 Команда проекта</h3>
                     <div id="team-admin-list" class="team-admin-list"></div>
+                </div>
+
+                <div class="panel">
+                    <h3>⭐ Отзывы покупателей <button onclick="openAllReviewsModal()" style="width: auto; padding: 5px 10px; font-size: 12px; background: var(--blue); color: #000;">Смотреть все</button></h3>
+                    <div id="recent-reviews-list" style="max-height: 300px; overflow-y: auto;"></div>
                 </div>
             </div>
         </div>
@@ -311,6 +325,15 @@
         </div>
     </div>
 
+    <!-- ОГРОМНОЕ ОКНО ВСЕХ ОТЗЫВОВ -->
+    <div class="admin-modal-overlay" id="allReviewsModal">
+        <div class="admin-modal huge">
+            <button onclick="document.getElementById('allReviewsModal').classList.remove('show')" style="position: absolute; right: 15px; top: 15px; width: auto; padding: 0; background: transparent; color: #888; font-size: 24px;">×</button>
+            <h3>⭐ Все отзывы</h3>
+            <div id="all-reviews-list" style="flex-grow: 1; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
     <script>
         function esc(s) {
             return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -400,6 +423,7 @@
                     if (!isFocusInside('users-list') && !document.querySelector('.admin-modal-overlay.show')) renderUsers();
                     
                     renderTeamAdmin();
+                    renderRecentReviews();
 
                     if(currentChatType === 'global') {
                         if (!isFocusInside('admin-gc-input') && !isFocusInside('edit-msg-text')) renderGlobalAdminChat();
@@ -433,6 +457,57 @@
                     <div class="team-admin-role">${roleNames[u.role] || u.role}</div>
                 </div>
             `).join('');
+        }
+
+        // --- ОТЗЫВЫ В АДМИНКЕ ---
+        function renderRecentReviews() {
+            const list = document.getElementById('recent-reviews-list');
+            if (!adminData.reviews) return;
+            
+            const recent = [...adminData.reviews].reverse().slice(0, 5);
+            if (recent.length === 0) { list.innerHTML = '<div style="color: #666;">Отзывов пока нет</div>'; return; }
+            
+            list.innerHTML = recent.map(r => {
+                const user = adminData.users.find(u => u.id === r.userId);
+                const userName = user ? user.name : 'Аноним';
+                const productName = getItemName(r.itemId);
+                let stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+                
+                return `
+                <div class="review-admin-card">
+                    <div class="review-admin-header">
+                        <span class="review-admin-user">${esc(userName)} (${esc(productName)})</span>
+                        <span class="review-admin-stars">${stars}</span>
+                    </div>
+                    <div class="review-admin-text">${esc(r.text || 'Без текста')}</div>
+                    <div class="review-admin-date">${r.date}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function openAllReviewsModal() {
+            document.getElementById('allReviewsModal').classList.add('show');
+            const list = document.getElementById('all-reviews-list');
+            if (!adminData.reviews) return;
+            
+            if (adminData.reviews.length === 0) { list.innerHTML = '<div style="text-align:center; color:#666;">Отзывов нет</div>'; return; }
+            
+            list.innerHTML = [...adminData.reviews].reverse().map(r => {
+                const user = adminData.users.find(u => u.id === r.userId);
+                const userName = user ? user.name : 'Аноним';
+                const productName = getItemName(r.itemId);
+                let stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+                
+                return `
+                <div class="review-admin-card" style="margin-bottom: 15px;">
+                    <div class="review-admin-header">
+                        <span class="review-admin-user">${esc(userName)} (${esc(productName)})</span>
+                        <span class="review-admin-stars">${stars}</span>
+                    </div>
+                    <div class="review-admin-text">${esc(r.text || 'Без текста')}</div>
+                    <div class="review-admin-date">${r.date}</div>
+                </div>`;
+            }).join('');
         }
 
         function updateChatBadges() {
