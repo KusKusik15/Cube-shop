@@ -103,11 +103,11 @@ app.get('/api/team', (req, res) => {
     const team = db.users.filter(u => u.role && u.role !== 'user').map(u => ({
         name: u.gameNick || u.name, role: u.role, avatar: u.avatar
     }));
-    if (!team.some(t => t.role === 'owner')) {
-        team.push({ name: 'KusKusik15', role: 'owner', avatar: null });
-    }
+    
+    // Убираем принудительное добавление, если его нет в базе, чтобы не было фантомов
     const roleOrder = { owner: 1, moder: 2, tester: 3 };
     team.sort((a, b) => (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99));
+    
     res.json(team);
 });
 
@@ -154,7 +154,8 @@ app.post('/api/admin/global-chat/send', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const { text, replyTo } = req.body;
     if (!text) return res.status(400).json({});
-    db.globalChat.push({ id: crypto.randomUUID(), userId: 'owner', name: 'KusKusik15', role: 'owner', text, replyTo: replyTo || null, edited: null, time: getMoscowTime() });
+    // ТЕПЕРЬ ИМЯ БЕРЕТСЯ ИЗ БАЗЫ (Kusik)
+    db.globalChat.push({ id: crypto.randomUUID(), userId: 'owner', name: 'Kusik', role: 'owner', text, replyTo: replyTo || null, edited: null, time: getMoscowTime() });
     if (db.globalChat.length > 100) db.globalChat.shift();
     saveDB(); res.json({ success: true });
 });
@@ -263,7 +264,7 @@ app.post('/api/chat', (req, res) => {
     // ВОЗВРАЩЕНЫ ПОЛНЫЕ ТЕКСТЫ АВТООТВЕТЧИКОВ
     let autoReply = 'Сообщение получено. Админ ответит позже.';
     if (type === 'seller') {
-        autoReply = 'Сообщение отправлено продавцу (KusKusik15). Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155';
+        autoReply = 'Сообщение отправлено продавцу. Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155';
     } else if (type === 'support') {
         autoReply = 'Ваше обращение принято в техподдержку. Пожалуйста, опишите проблему подробнее и ожидайте ответа администратора.';
     }
@@ -288,15 +289,9 @@ app.post('/api/admin/login', (req, res) => {
     if (req.body.password === ADMIN_PASSWORD) { 
         req.session.isAdmin = true; 
         
-        // Ищем KusKusik15, если его нет - создаем, и жестко даем ему владельца.
-        let ownerUser = db.users.find(u => u.gameNick === 'KusKusik15' || u.name === 'KusKusik15');
-        if (!ownerUser) {
-            ownerUser = { 
-                id: 'admin-owner-id', name: 'KusKusik15', gameNick: 'KusKusik15', 
-                role: 'owner', avatar: null, isBanned: false, mutedUntil: null, banReason: null, muteReason: null 
-            };
-            db.users.push(ownerUser);
-        } else {
+        // Ищем твой аккаунт Kusik, чтобы дать ему права владельца
+        let ownerUser = db.users.find(u => u.name === 'Kusik' || u.gameNick === 'Kusik');
+        if (ownerUser) {
             ownerUser.role = 'owner';
         }
         
