@@ -45,10 +45,8 @@
         .shop-column { width: 100%; }
         
         .server-banner { background: linear-gradient(90deg, #ff0000, #cc0000); color: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; text-align: center; font-weight: 800; font-size: 18px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(255,0,0,0.3); letter-spacing: 1px;}
-
         .seller-nick-banner { background: rgba(0, 136, 204, 0.15); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 15px; }
         .seller-nick-banner b { color: #00d2ff; font-size: 18px; text-shadow: 0 0 10px rgba(0, 210, 255, 0.4);}
-
         .schedule-banner { background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 14px; }
         .schedule-banner b { color: var(--accent); }
         .tg-banner { background: rgba(0, 136, 204, 0.2); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 30px; text-align: center; font-size: 14px; }
@@ -73,11 +71,9 @@
 
         .news-column { background: var(--bg-panel); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 12px; padding: 20px; position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow-y: auto; }
         .news-title-main { font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;}
-        
         .news-card { background: #061225; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
         .news-card.pinned { border: 2px solid #ffb703; border-left-width: 6px; background: #111a11; }
         .pinned-badge { background: #ffb703; color: #000; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px;}
-        
         .news-date { font-size: 12px; color: #888; margin-bottom: 5px; }
         .news-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 8px; }
         .news-content { font-size: 13px; line-height: 1.5; color: #ccc; white-space: pre-wrap; }
@@ -147,15 +143,7 @@
         .order-info span { color: var(--accent); font-weight: bold;}
         .order-date { font-size: 11px; color: #555; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; padding-bottom: 5px;}
         
-        .order-review-display {
-            background: rgba(255, 183, 3, 0.1);
-            border-left: 2px solid #ffb703;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 14px;
-            color: #eee;
-            margin-top: 10px;
-        }
+        .order-review-display { background: rgba(255, 183, 3, 0.1); border-left: 2px solid #ffb703; padding: 10px; border-radius: 4px; font-size: 14px; color: #eee; margin-top: 10px; }
         .order-review-display .stars { color: #ffb703; font-size: 16px;}
         
         .btn-confirm-receipt { background: #28a745; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
@@ -185,6 +173,12 @@
         .gc-ban-banner { background: rgba(255, 77, 77, 0.15); border-bottom: 1px solid #ff4d4d; color: #ff4d4d; padding: 12px 20px; text-align: center; font-size: 14px; font-weight: 600; display: none; }
         .gc-ban-banner.show { display: block; }
         .gc-ban-banner b { color: #fff; }
+        
+        /* Плашка закрепленного сообщения */
+        .gc-pinned-msg { background: rgba(255, 183, 3, 0.1); border-bottom: 1px solid rgba(255, 183, 3, 0.3); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; max-width: 1000px; margin: 0 auto; width: 100%; font-size: 13px; }
+        .gc-pinned-msg-content { display: flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .gc-pinned-msg-content b { color: #ffb703; }
+
         .gc-messages-container { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 1000px; margin: 0 auto; width: 100%; }
         .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333; position: relative;}
         .gc-header-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; color: #888; gap: 15px;}
@@ -193,10 +187,13 @@
         .gc-msg.system-msg .gc-text { color: #ff4d4d; font-size: 13px;}
         .gc-reply-quote { background: rgba(0,0,0,0.3); border-left: 3px solid #888; padding: 5px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 12px; color: #aaa; }
         .gc-reply-quote b { color: var(--accent); }
-        .gc-actions { display: none; gap: 5px; position: absolute; top: -14px; right: 10px; background: #061225; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
+        
+        .gc-actions { display: none; gap: 5px; position: absolute; top: -14px; right: 10px; background: #061225; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; z-index: 10;}
         .gc-msg:hover .gc-actions { display: flex; }
         .gc-actions button { background: transparent; border: none; cursor: pointer; font-size: 14px; color: #888; padding: 0; }
         .gc-actions button:hover { color: var(--accent); }
+        .gc-actions button.mod-action { color: #ffb703; font-weight: bold; }
+        
         @keyframes gcFirstShow { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .gc-msg.gc-new { animation: gcFirstShow 0.35s ease-out; }
         @keyframes ownerGlow { 0%, 100% { box-shadow: 0 0 8px rgba(255, 183, 3, 0.3), 0 0 15px rgba(255, 183, 3, 0.15); border-color: rgba(255, 183, 3, 0.6); } 50% { box-shadow: 0 0 15px rgba(255, 183, 3, 0.7), 0 0 30px rgba(255, 183, 3, 0.4); border-color: rgba(255, 183, 3, 1); } }
@@ -397,6 +394,12 @@
             </div>
         </div>
         <div class="gc-ban-banner" id="gc-ban-banner"></div>
+        
+        <div class="gc-pinned-msg" id="gc-pinned-msg" style="display: none;">
+            <div class="gc-pinned-msg-content" id="gc-pinned-content"></div>
+            <button onclick="unpinMessage()" style="background: transparent; border: none; color: #888; cursor: pointer; font-size: 16px;">×</button>
+        </div>
+
         <div class="gc-messages-container" id="gc-box"></div>
         <div class="gc-reply-preview" id="gc-reply-preview">
             <span id="gc-reply-text"></span>
@@ -554,6 +557,7 @@
         let globalChatInterval = null;
         let chatCheckInterval = null;
         let lastGlobalId = null;
+        let pinnedMsgId = null;
         
         let replyToId = null;
         let editingMsgId = null;
@@ -703,8 +707,8 @@
 
                 const gcRes = await fetch('/api/global-chat');
                 if (gcRes.ok) {
-                    const gcMsgs = await gcRes.json();
-                    const gcUnread = Math.max(0, gcMsgs.length - seenCounts.global);
+                    const gcData = await gcRes.json();
+                    const gcUnread = Math.max(0, gcData.messages.length - seenCounts.global);
                     const gcBadge = document.getElementById('gc-badge');
                     if (gcUnread > 0) { gcBadge.innerText = gcUnread; gcBadge.style.display = 'inline-block'; }
                     else { gcBadge.style.display = 'none'; }
@@ -862,7 +866,6 @@
                         if (o.status === 'cancelled_by_user') statusBadge = '<span style="color:#888">Отменен (по желанию)</span>';
                         if (o.status === 'cancelled_by_dispute') statusBadge = '<span style="color:#ff4d4d">Отменен (спор)</span>';
                         
-                        // Ищем отзыв строго по ID заказа (orderId)
                         let reviewData = myReviews.find(r => r.orderId === o.id);
                         
                         let reviewHtml = '';
@@ -875,7 +878,7 @@
                                 </div>
                             `;
                         } else if (o.reviewed) {
-                            reviewHtml = `<div class="order-review-display"><div style="color:#888;">Отзыв оставлен (для старых версий).</div></div>`;
+                            reviewHtml = `<div class="order-review-display"><div style="color:#888;">Отзыв оставлен.</div></div>`;
                         }
 
                         let btnHtml = '';
@@ -1106,8 +1109,8 @@
             try {
                 const res = await fetch('/api/global-chat');
                 if (res.ok) {
-                    const msgs = await res.json();
-                    seenCounts.global = msgs.length;
+                    const data = await res.json();
+                    seenCounts.global = data.messages.length;
                     saveSeenCounts();
                     checkChatBadges();
                 }
@@ -1203,11 +1206,64 @@
             });
         }
 
+        // --- МОДЕРАЦИЯ ИЗ МАГАЗИНА ---
+        function openMuteModalFromChat(userId, userName) {
+            const mins = prompt(`На сколько минут замутить ${userName}?`, "30");
+            if (mins === null) return;
+            const parsedMins = parseInt(mins);
+            if (isNaN(parsedMins) || parsedMins < 1) return alert('Неверное время');
+            const reason = prompt(`Причина мута для ${userName} (необязательно):`, "");
+            
+            fetch('/api/mod/chat-action', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ userId, action: 'mute', minutes: parsedMins, reason })
+            }).then(res => {
+                if (res.ok) { showToast('Игрок замучен', 'success'); loadGlobalChat(true); }
+                else showToast('Ошибка (нет прав)', 'error');
+            });
+        }
+
+        async function pinMessage(msgId) {
+            const res = await fetch('/api/global-chat/pin', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId })
+            });
+            if (res.ok) loadGlobalChat(true);
+            else showToast('Ошибка закрепления (нет прав)', 'error');
+        }
+
+        async function unpinMessage() {
+            // Просто отправляем тот же ID, сервер переключит его в null
+            const res = await fetch('/api/global-chat/pin', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId: pinnedMsgId })
+            });
+            if (res.ok) loadGlobalChat(true);
+        }
+
         async function loadGlobalChat(forceReload = false) {
             const res = await fetch('/api/global-chat');
             if (res.ok) {
-                const msgs = await res.json();
+                const data = await res.json();
+                const msgs = data.messages;
+                pinnedMsgId = data.pinnedMsgId;
+                
                 const box = document.getElementById('gc-box');
+                const pinnedBox = document.getElementById('gc-pinned-msg');
+                const pinnedContent = document.getElementById('gc-pinned-content');
+
+                // Отрисовка закрепленного
+                if (pinnedMsgId) {
+                    const pinMsg = msgs.find(m => m.id === pinnedMsgId);
+                    if (pinMsg) {
+                        pinnedBox.style.display = 'flex';
+                        pinnedContent.innerHTML = `<span>📌</span> <b>${pinMsg.name}:</b> <span>${pinMsg.text}</span>`;
+                    } else {
+                        pinnedBox.style.display = 'none';
+                    }
+                } else {
+                    pinnedBox.style.display = 'none';
+                }
                 
                 const currentLastId = msgs.length > 0 ? msgs[msgs.length - 1].id : null;
                 const nothingChanged = !forceReload && currentLastId === lastGlobalId && box.children.length > 0;
@@ -1220,13 +1276,14 @@
                 box.innerHTML = '';
                 lastGlobalId = currentLastId;
                 
+                const isMod = currentUser && (currentUser.role === 'moder' || currentUser.role === 'owner');
+
                 msgs.forEach((m, idx) => {
                     let roleClass = 'role-user';
                     let badge = '';
                     
                     if (m.role === 'system') {
                         roleClass = 'system-msg';
-                        badge = '';
                     } else if (m.role === 'owner') {
                         roleClass = 'role-owner';
                         badge = `<span class="gc-badge owner">ВЛАДЕЛЕЦ</span>`;
@@ -1253,9 +1310,20 @@
                     if (m.role !== 'system') {
                         actionsHtml += `<button onclick="copyMsgText(this.closest('.gc-msg').querySelector('.gc-text').innerText)" title="Копировать">📋</button>`;
                         actionsHtml += `<button onclick="replyToMessage('${m.id}', '${m.text.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${m.name}')" title="Ответить">↩️</button>`;
-                        if (m.userId === currentUser.id) {
-                            actionsHtml += `<button onclick="openEditMsgModal('${m.id}', this.closest('.gc-msg').querySelector('.gc-text').innerText)" title="Редактировать">✏️</button>`;
-                            actionsHtml += `<button onclick="deleteMsg('${m.id}')" title="Удалить" style="color:#ff4d4d;">🗑️</button>`;
+                        
+                        // Кнопки для модеров
+                        if (isMod) {
+                            actionsHtml += `<button class="mod-action" onclick="pinMessage('${m.id}')" title="Закрепить">📌</button>`;
+                            actionsHtml += `<button class="mod-action" onclick="deleteMsg('${m.id}')" title="Удалить (Модер)">🗑️</button>`;
+                            if (m.userId !== currentUser.id && m.userId !== 'owner' && m.userId !== 'system') {
+                                actionsHtml += `<button class="mod-action" onclick="openMuteModalFromChat('${m.userId}', '${m.name}')" title="Замутить (Модер)">🔇</button>`;
+                            }
+                        } else {
+                            // Обычные юзеры могут удалять/редачить только свои
+                            if (m.userId === currentUser.id) {
+                                actionsHtml += `<button onclick="openEditMsgModal('${m.id}', this.closest('.gc-msg').querySelector('.gc-text').innerText)" title="Редактировать">✏️</button>`;
+                                actionsHtml += `<button onclick="deleteMsg('${m.id}')" title="Удалить" style="color:#ff4d4d;">🗑️</button>`;
+                            }
                         }
                     }
                     actionsHtml += `</div>`;
