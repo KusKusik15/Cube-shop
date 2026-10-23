@@ -105,7 +105,7 @@
         .gc-reply-quote { background: rgba(0,0,0,0.3); border-left: 3px solid #888; padding: 5px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 12px; color: #aaa; }
         .gc-reply-quote b { color: var(--blue); }
 
-        .gc-actions { display: none; gap: 5px; position: absolute; top: -14px; right: 10px; background: #000; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
+        .gc-actions { display: none; gap: 5px; position: absolute; top: -14px; right: 10px; background: #000; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; z-index: 10;}
         .gc-msg:hover .gc-actions { display: flex; }
         .gc-actions button { background: transparent; border: none; cursor: pointer; font-size: 14px; color: #888; padding: 0; }
         .gc-actions button:hover { color: var(--blue); }
@@ -265,13 +265,19 @@
             </div>
 
             <div id="global-chat-layout" style="display: none; flex-direction: column; height: 500px;">
+                <!-- Плашка закрепленного -->
+                <div class="gc-pinned-msg" id="admin-gc-pinned-msg" style="display: none; background: #000; border: 1px solid #333; border-radius: 5px; margin-bottom: 10px; padding: 10px; font-size: 12px; align-items: center; justify-content: space-between; gap: 10px;">
+                    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><b style="color: var(--gold);">📌 Закреплено:</b> <span id="admin-gc-pinned-content"></span></div>
+                    <button onclick="unpinGlobalMessage()" style="background: transparent; border: none; color: #888; cursor: pointer; width: auto; padding: 0 5px;">×</button>
+                </div>
+
                 <div class="messages" id="admin-gc-box" style="background: #000; border: 1px solid var(--border); padding: 15px; border-radius: 5px; margin-bottom: 15px;"></div>
                 <div class="gc-reply-preview" id="gc-reply-preview" style="margin-bottom: 5px; border-radius: 5px; border: 1px solid #333; display: none; padding: 10px; justify-content: space-between; align-items: center;">
                     <span id="gc-reply-text" style="font-size: 12px; color: #888;"></span>
                     <button onclick="cancelReply()" style="width: auto; padding: 2px 8px; background: #ff4d4d; color: white; font-size: 10px;">X</button>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <input type="text" id="admin-gc-input" placeholder="Написать в общий чат (от лица KusKusik15)..." onkeypress="if(event.key === 'Enter') sendGlobalAdminMsg()">
+                    <input type="text" id="admin-gc-input" placeholder="Написать в общий чат (от лица Kusik)..." onkeypress="if(event.key === 'Enter') sendGlobalAdminMsg()">
                     <button onclick="sendGlobalAdminMsg()" style="width: 100px; background: var(--gold); color: #000;">➤</button>
                 </div>
             </div>
@@ -325,7 +331,6 @@
         </div>
     </div>
 
-    <!-- ОГРОМНОЕ ОКНО ВСЕХ ОТЗЫВОВ -->
     <div class="admin-modal-overlay" id="allReviewsModal">
         <div class="admin-modal huge">
             <button onclick="document.getElementById('allReviewsModal').classList.remove('show')" style="position: absolute; right: 15px; top: 15px; width: auto; padding: 0; background: transparent; color: #888; font-size: 24px;">×</button>
@@ -370,6 +375,7 @@
         let pendingMute = null;
         let pendingBan = null;
         let lastGlobalId = null;
+        let pinnedMsgId = null;
 
         let replyToId = null;
         let editingMsgId = null;
@@ -459,7 +465,6 @@
             `).join('');
         }
 
-        // --- ОТЗЫВЫ В АДМИНКЕ ---
         function renderRecentReviews() {
             const list = document.getElementById('recent-reviews-list');
             if (!adminData.reviews) return;
@@ -994,9 +999,47 @@
             });
         }
 
+        async function pinGlobalMessage(msgId) {
+            const res = await fetch('/api/admin/global-chat/pin', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId })
+            });
+            if (res.ok) {
+                await loadData();
+                renderGlobalAdminChat(true);
+            }
+        }
+
+        async function unpinGlobalMessage() {
+            const res = await fetch('/api/admin/global-chat/pin', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId: pinnedMsgId })
+            });
+            if (res.ok) {
+                await loadData();
+                renderGlobalAdminChat(true);
+            }
+        }
+
         function renderGlobalAdminChat(forceReload = false) {
             const box = document.getElementById('admin-gc-box');
             if (!adminData.globalChat) return;
+            
+            pinnedMsgId = adminData.pinnedMsgId;
+            const pinnedBox = document.getElementById('admin-gc-pinned-msg');
+            const pinnedContent = document.getElementById('admin-gc-pinned-content');
+
+            if (pinnedMsgId) {
+                const pinMsg = adminData.globalChat.find(m => m.id === pinnedMsgId);
+                if (pinMsg) {
+                    pinnedBox.style.display = 'flex';
+                    pinnedContent.innerHTML = `<b>${esc(pinMsg.name)}:</b> ${esc(pinMsg.text)}`;
+                } else {
+                    pinnedBox.style.display = 'none';
+                }
+            } else {
+                pinnedBox.style.display = 'none';
+            }
             
             const currentLastId = adminData.globalChat.length > 0 
                 ? adminData.globalChat[adminData.globalChat.length - 1].id 
@@ -1028,9 +1071,9 @@
                 if (m.role !== 'system') {
                     actionsHtml += `<button onclick="copyMsgText('${m.text.replace(/'/g, "\\'")}')" title="Копировать">📋</button>`;
                     actionsHtml += `<button onclick="replyToMessage('${m.id}', '${m.text.replace(/'/g, "\\'")}', '${esc(m.name)}')" title="Ответить">↩️</button>`;
+                    actionsHtml += `<button onclick="pinGlobalMessage('${m.id}')" title="Закрепить">📌</button>`;
                     if (m.role === 'owner') {
                         actionsHtml += `<button onclick="openEditMsgModal('${m.id}', '${m.text.replace(/'/g, "\\'")}')" title="Редактировать">✏️</button>`;
-                        actionsHtml += `<button onclick="deleteMsg('${m.id}')" title="Удалить" style="color:#ff4d4d;">🗑️</button>`;
                     }
                 }
                 actionsHtml += `</div>`;
