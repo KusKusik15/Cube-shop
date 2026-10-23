@@ -49,15 +49,22 @@
         .order-info { flex-grow: 1; }
         .btn-complete { background: var(--green); width: auto; padding: 8px 15px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;}
         
-        .user-admin-item { background: #000; padding: 10px; border-radius: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; flex-wrap: wrap; gap: 5px;}
+        .user-admin-item { background: #000; padding: 10px; border-radius: 5px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #222;}
+        .user-admin-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;}
         .user-admin-name { font-weight: bold; font-size: 14px; }
-        .user-admin-info { font-size: 11px; color: #888; width: 100%;}
+        .user-admin-info { font-size: 11px; color: #888;}
         .role-select { width: auto; margin-bottom: 0; padding: 5px; font-size: 12px;}
-        .user-actions { display: flex; gap: 5px;}
-        .btn-mini { padding: 4px 8px; font-size: 11px; width: auto; }
+        .user-actions { display: flex; gap: 5px; flex-wrap: wrap;}
+        .btn-mini { padding: 5px 10px; font-size: 11px; width: auto; }
         .btn-mute { background: #ffb703; color: #000; }
         .btn-ban { background: #ff4d4d; color: #fff; }
         .btn-unban { background: #28a745; color: #fff; }
+        .btn-unmute { background: #00d2ff; color: #000; }
+
+        /* Выбор времени мута */
+        .mute-controls { display: flex; gap: 5px; flex-wrap: wrap; align-items: center;}
+        .mute-select { width: auto; margin-bottom: 0; padding: 5px; font-size: 12px; flex-grow: 1; min-width: 120px;}
+        .mute-custom { width: 60px; margin-bottom: 0; padding: 5px; font-size: 12px; text-align: center;}
 
         .news-admin-item { background: #000; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 2px solid var(--blue); }
         .news-admin-item.pinned { border-left-color: var(--gold); background: #111a11; }
@@ -71,7 +78,6 @@
         .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: auto;}
         .chat-tab.active { background: var(--blue); color: #000; border-color: var(--blue); font-weight: bold;}
         
-        /* Макет для чатов */
         .chat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 15px; height: 500px; }
         .user-list { background: #000; border-radius: 5px; overflow-y: auto; border: 1px solid var(--border); }
         .user-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
@@ -83,19 +89,53 @@
         .msg.user { background: #333; align-self: flex-start; }
         .msg.admin { background: var(--blue); color: #000; align-self: flex-end; }
         
-        /* Спец. стили для общего чата в админке */
         .gc-msg { padding: 10px; border-radius: 5px; background: #111; border-left: 3px solid #333; display: flex; justify-content: space-between; gap: 10px;}
         .gc-msg.role-owner { border-left-color: var(--gold); background: rgba(255, 183, 3, 0.05);}
         .gc-msg.role-moder { border-left-color: var(--accent); background: rgba(255, 77, 77, 0.05);}
         .gc-msg.role-tester { border-left-color: var(--blue); background: rgba(0, 210, 255, 0.05);}
         .gc-text { font-size: 14px; }
-        .gc-header { font-size: 11px; color: #888; margin-bottom: 3px; display: flex; gap: 10px; align-items: center;}
+        .gc-header-info { font-size: 11px; color: #888; margin-bottom: 3px; display: flex; gap: 10px; align-items: center;}
         .gc-name { font-weight: bold; color: #fff;}
         .btn-del-msg { background: transparent; color: #ff4d4d; border: none; font-size: 18px; cursor: pointer; width: auto; padding: 0 5px;}
         
         .pass-wrapper { position: relative; margin-bottom: 15px; }
         .pass-wrapper input { margin-bottom: 0; padding-right: 40px; }
         .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 20px; }
+
+        /* МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ СМЕНЫ РОЛИ */
+        .admin-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9000;
+            backdrop-filter: blur(4px);
+        }
+        .admin-modal-overlay.show { display: flex; }
+        .admin-modal {
+            background: var(--panel);
+            border: 1px solid var(--blue);
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 210, 255, 0.2);
+            animation: modalIn 0.25s ease-out;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .admin-modal h3 { color: var(--blue); margin-bottom: 15px; font-size: 22px; }
+        .admin-modal p { color: #ccc; margin-bottom: 25px; font-size: 15px; line-height: 1.5; }
+        .admin-modal b { color: #fff; }
+        .admin-modal .role-highlight { color: var(--gold); font-weight: 800; }
+        .admin-modal-btns { display: flex; gap: 10px; }
+        .admin-modal-btns button { flex: 1; padding: 12px; font-size: 14px; }
+        .admin-modal-btns .btn-cancel-modal { background: transparent; border: 1px solid #666; color: #aaa; }
+        .admin-modal-btns .btn-confirm-modal { background: var(--green); }
 
         @media (max-width: 800px) {
             body { padding: 10px; }
@@ -150,7 +190,7 @@
                 
                 <div class="panel">
                     <h3>Пользователи и Роли</h3>
-                    <div id="users-list" style="max-height: 300px; overflow-y: auto;"></div>
+                    <div id="users-list" style="max-height: 400px; overflow-y: auto;"></div>
                 </div>
             </div>
         </div>
@@ -168,7 +208,6 @@
                 <button class="chat-tab" id="tab-global" onclick="switchChatTab('global')">🗣️ Общий чат</button>
             </div>
             
-            <!-- ЧАТ С КЛИЕНТАМИ / ПОДДЕРЖКА -->
             <div class="chat-layout" id="private-chats-layout">
                 <div class="user-list" id="chat-users"></div>
                 <div class="chat-area">
@@ -180,7 +219,6 @@
                 </div>
             </div>
 
-            <!-- ОБЩИЙ ЧАТ (АДМИН) -->
             <div id="global-chat-layout" style="display: none; flex-direction: column; height: 500px;">
                 <div class="messages" id="admin-gc-box" style="background: #000; border: 1px solid var(--border); padding: 15px; border-radius: 5px; margin-bottom: 15px;"></div>
                 <div style="display: flex; gap: 10px;">
@@ -192,8 +230,19 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ПОДТВЕРЖДЕНИЯ СМЕНЫ РОЛИ -->
+    <div class="admin-modal-overlay" id="roleConfirmModal">
+        <div class="admin-modal">
+            <h3>Смена роли</h3>
+            <p id="role-confirm-text"></p>
+            <div class="admin-modal-btns">
+                <button class="btn-cancel-modal" onclick="cancelRoleChange()">Отмена</button>
+                <button class="btn-confirm-modal" onclick="confirmRoleChange()">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // [ФИКС 1] Экранирование HTML (защита от XSS)
         function esc(s) {
             return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
@@ -224,8 +273,8 @@
         }
 
         let adminData = null, currentChatUser = null, currentChatType = 'seller', isUpdating = false;
-        // [ФИКС 10] Храним id таймера, чтобы очищать при логауте
         let loadDataTimerId = null;
+        let pendingRoleChange = null; // { userId, newRole, selectEl }
 
         function togglePassword() { const i = document.getElementById('pass-input'); i.type = i.type === 'password' ? 'text' : 'password'; }
 
@@ -238,15 +287,12 @@
             const res = await fetch('/api/admin/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ password: document.getElementById('pass-input').value }) });
             if (res.ok) { document.getElementById('login-box').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; loadData(); } else { alert('Неверный пароль!'); }
         }
-        // [ФИКС 10] Очищаем таймер перед выходом
         async function logout() { 
             if (loadDataTimerId) { clearTimeout(loadDataTimerId); loadDataTimerId = null; }
             await fetch('/api/admin/logout', { method: 'POST' }); 
             window.location.reload(); 
         }
 
-        // [ФИКС 9] Не перерисовываем панель, где сейчас фокус пользователя
-        // (чтобы не терять введённый текст при автообновлении каждые 5 сек)
         function isFocusInside(elId) {
             const el = document.getElementById(elId);
             if (!el) return false;
@@ -261,7 +307,6 @@
                 if (res.ok) { 
                     adminData = await res.json(); 
                     if (!adminData.prices) adminData.prices = {};
-                    // [ФИКС 9] Каждую панель перерисовываем только если в ней нет фокуса
                     if (!isFocusInside('inventory-list')) renderInventory();
                     if (!isFocusInside('orders-list')) renderOrders();
                     if (!isFocusInside('news-list') && !isFocusInside('news-title') && !isFocusInside('news-content')) renderNews();
@@ -278,7 +323,6 @@
                 }
             } catch (e) {} finally { 
                 isUpdating = false; 
-                // [ФИКС 10] Сохраняем id таймера
                 loadDataTimerId = setTimeout(loadData, 5000); 
             }
         }
@@ -344,23 +388,47 @@
             if (!adminData.users) return;
             
             adminData.users.forEach(u => {
-                let roleLabel = u.role === 'owner' ? '👑 Владелец' : (u.role === 'moder' ? '🛡️ Модер' : (u.role === 'tester' ? '🧪 Тестер' : '👤 Игрок'));
-                
-                // Кнопки модерации
                 let actionBtns = '';
                 if (u.isBanned) {
                     actionBtns = `<button class="btn-mini btn-unban" onclick="chatAction('${u.id}', 'unban')">Разбанить</button>`;
                 } else {
+                    // Умный мут: выбор времени + своё значение
+                    let muteControls = `
+                        <select class="mute-select" id="mute-time-${u.id}">
+                            <option value="30">30 минут</option>
+                            <option value="60">1 час</option>
+                            <option value="360">6 часов</option>
+                            <option value="1440">1 день</option>
+                            <option value="10080">7 дней</option>
+                            <option value="43200">30 дней</option>
+                            <option value="525600">365 дней</option>
+                            <option value="custom">Своё...</option>
+                        </select>
+                        <input type="number" class="mute-custom" id="mute-custom-${u.id}" placeholder="мин" min="1" max="525600" style="display: none;">
+                        <button class="btn-mini btn-mute" onclick="applyMute('${u.id}')">Мут</button>
+                    `;
+                    if (u.isMuted) {
+                        let until = u.mutedUntil ? new Date(u.mutedUntil).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+                        muteControls = `
+                            <button class="btn-mini btn-unmute" onclick="chatAction('${u.id}', 'unmute')">Снять мут</button>
+                            <span style="font-size: 11px; color: #ffb703; align-self: center;">до ${until}</span>
+                        `;
+                    }
                     actionBtns = `
-                        <button class="btn-mini btn-mute" onclick="chatAction('${u.id}', 'mute', 30)">Мут (30м)</button>
+                        ${muteControls}
                         <button class="btn-mini btn-ban" onclick="chatAction('${u.id}', 'ban')">Бан</button>
                     `;
                 }
 
+                let roleLabel = u.role === 'owner' ? '👑 Владелец' : (u.role === 'moder' ? '🛡️ Модер' : (u.role === 'tester' ? '🧪 Тестер' : '👤 Игрок'));
+
                 list.innerHTML += `
                     <div class="user-admin-item">
-                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                        <div class="user-admin-row">
                             <span class="user-admin-name">${esc(u.name)}</span>
+                            <span style="font-size: 11px; color: #00d2ff;">${roleLabel}</span>
+                        </div>
+                        <div class="user-admin-row">
                             <select class="role-select" onchange="changeRole('${u.id}', this.value, this)">
                                 <option value="user" ${u.role === 'user' ? 'selected' : ''}>Игрок</option>
                                 <option value="tester" ${u.role === 'tester' ? 'selected' : ''}>Тестер</option>
@@ -368,24 +436,60 @@
                                 <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
                             </select>
                         </div>
-                        <div class="user-admin-info">
-                            ${u.isMuted ? '<span style="color:#ffb703">В муте</span>' : ''}
-                            ${u.isBanned ? '<span style="color:#ff4d4d">Забанен</span>' : ''}
-                        </div>
                         <div class="user-actions">${actionBtns}</div>
                     </div>
                 `;
             });
+
+            // Обработчик для селектов «Своё...»
+            document.querySelectorAll('.mute-select').forEach(sel => {
+                sel.addEventListener('change', function() {
+                    const userId = this.id.replace('mute-time-', '');
+                    const customInput = document.getElementById(`mute-custom-${userId}`);
+                    if (this.value === 'custom') customInput.style.display = 'inline-block';
+                    else customInput.style.display = 'none';
+                });
+            });
         }
 
-        // [ФИКС 7] Подтверждение + обработка ошибок при смене роли
-        async function changeRole(userId, newRole, selectEl) {
-            const roleNames = { user: 'Игрок', tester: 'Тестер', moder: 'Модер', owner: 'Владелец' };
-            if (!confirm(`Выдать роль "${roleNames[newRole] || newRole}"?`)) {
-                // откатываем select к предыдущему значению
-                if (selectEl) { loadData(); }
-                return;
+        // Применение мута
+        async function applyMute(userId) {
+            const sel = document.getElementById(`mute-time-${userId}`);
+            let minutes = sel.value;
+            if (minutes === 'custom') {
+                const custom = document.getElementById(`mute-custom-${userId}`);
+                minutes = parseInt(custom.value);
+                if (!minutes || minutes < 1) return alert('Введите количество минут (минимум 1)');
+                if (minutes > 525600) minutes = 525600;
             }
+            await chatAction(userId, 'mute', parseInt(minutes));
+        }
+
+        // Красивое окно подтверждения смены роли
+        function changeRole(userId, newRole, selectEl) {
+            const user = adminData.users.find(u => u.id === userId);
+            const roleNames = { user: 'Игрок', tester: 'Тестер', moder: 'Модер', owner: 'Владелец' };
+            pendingRoleChange = { userId, newRole, selectEl, oldRole: user ? user.role : 'user' };
+            
+            document.getElementById('role-confirm-text').innerHTML = 
+                `Выдать игроку <b>${esc(user ? user.name : 'Неизвестный')}</b> роль <span class="role-highlight">${roleNames[newRole] || newRole}</span>?`;
+            document.getElementById('roleConfirmModal').classList.add('show');
+        }
+
+        function cancelRoleChange() {
+            document.getElementById('roleConfirmModal').classList.remove('show');
+            if (pendingRoleChange && pendingRoleChange.selectEl) {
+                pendingRoleChange.selectEl.value = pendingRoleChange.oldRole;
+            }
+            pendingRoleChange = null;
+        }
+
+        async function confirmRoleChange() {
+            if (!pendingRoleChange) return;
+            const { userId, newRole } = pendingRoleChange;
+            document.getElementById('roleConfirmModal').classList.remove('show');
+            pendingRoleChange = null;
+            
             try {
                 const res = await fetch('/api/admin/set-role', { 
                     method: 'POST', 
@@ -400,7 +504,6 @@
             }
         }
 
-        // [ФИКС 8] Обработка ошибок при модерации
         async function chatAction(userId, action, minutes = 0) {
             try {
                 const res = await fetch('/api/admin/chat-action', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId, action, minutes }) });
@@ -478,14 +581,12 @@
                 else if (o.status === 'cancelled_by_user') statusHtml = `<span style="color:#888">Отменен игроком (по желанию)</span>`;
                 else if (o.status === 'cancelled_by_dispute') statusHtml = `<span style="color:#ff4d4d">Отменен (Спор не решен)</span>`;
 
-                // [ФИКС 4] buyerNick и displayNick экранируются
                 html += `<div class="order-item" style="${isPending ? '' : 'opacity: 0.8;'} ${o.status === 'dispute' || o.status === 'cancelled_by_dispute' ? 'border-left-color: #ff4d4d;' : ''}">
                     <div class="order-info"><b>${esc(displayNick)}</b> купил <b>${esc(productName)}</b> (x${o.qty})<br>Ник: <b style="color: #fff;">${esc(o.buyerNick)}</b><br>${statusHtml}</div>${btnHtml}</div>`;
             });
             list.innerHTML = html;
         }
 
-        // [ФИКС 8] Обработка ошибок при выдаче заказа
         async function completeOrder(id, btn) {
             if (!confirm('Выдали товар?')) return; btn.disabled = true; btn.innerText = '...';
             try {
@@ -495,7 +596,6 @@
             } catch (e) { alert('Ошибка сети: ' + e.message); btn.disabled = false; btn.innerText = 'Выдать'; }
         }
 
-        // --- ПЕРЕКЛЮЧЕНИЕ ЧАТОВ ---
         function switchChatTab(type) {
             currentChatType = type;
             document.getElementById('tab-seller').classList.remove('active'); 
@@ -515,7 +615,6 @@
             }
         }
 
-        // --- ЛОГИКА ЛИЧНЫХ ЧАТОВ ---
         function renderChatUsers() {
             const list = document.getElementById('chat-users'); list.innerHTML = '';
             const usersWithMsgs = [...new Set(adminData.messages.filter(m => m.type === currentChatType).map(m => m.userId))];
@@ -526,7 +625,6 @@
                 if (user) {
                     const div = document.createElement('div');
                     div.className = `user-item ${currentChatUser === userId ? 'active' : ''}`;
-                    // [ФИКС 2] innerText сам по себе безопасен, но оставим как было
                     div.innerText = user.name;
                     div.onclick = () => openChat(userId);
                     list.appendChild(div);
@@ -538,12 +636,10 @@
             currentChatUser = userId; renderChatUsers();
             const msgBox = document.getElementById('chat-messages'); msgBox.innerHTML = '';
             const userMsgs = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType);
-            // [ФИКС 5] Экранируем текст сообщений
             userMsgs.forEach(m => { msgBox.innerHTML += `<div class="msg ${m.sender}">${esc(m.text)}</div>`; });
             msgBox.scrollTop = msgBox.scrollHeight;
         }
 
-        // [ФИКС 8] Обработка ошибок при отправке ответа
         async function sendReply() {
             if (!currentChatUser) return alert('Выберите пользователя!');
             const input = document.getElementById('admin-reply-input'); const text = input.value.trim(); if (!text) return;
@@ -554,7 +650,6 @@
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
 
-        // --- ЛОГИКА ОБЩЕГО ЧАТА В АДМИНКЕ ---
         function renderGlobalAdminChat() {
             const box = document.getElementById('admin-gc-box');
             if (!adminData.globalChat) return;
@@ -566,11 +661,10 @@
                 else if (m.role === 'moder') roleClass = 'role-moder';
                 else if (m.role === 'tester') roleClass = 'role-tester';
 
-                // [ФИКС 6] Экранируем имя и текст сообщения
                 box.innerHTML += `
                     <div class="gc-msg ${roleClass}">
                         <div>
-                            <div class="gc-header">
+                            <div class="gc-header-info">
                                 <span class="gc-name">${esc(m.name)}</span>
                                 <span>${m.time}</span>
                             </div>
@@ -583,7 +677,6 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        // [ФИКС 8] Обработка ошибок при отправке в общий чат
         async function sendGlobalAdminMsg() {
             const input = document.getElementById('admin-gc-input');
             const text = input.value.trim();
@@ -599,7 +692,6 @@
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
 
-        // [ФИКС 8] Обработка ошибок при удалении
         async function deleteGlobalMessage(msgId) {
             if(!confirm('Удалить это сообщение?')) return;
             try {
