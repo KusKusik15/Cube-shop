@@ -166,7 +166,7 @@ app.post('/api/admin/global-chat/delete', (req, res) => {
     res.json({ success: true });
 });
 
-// Мут и Бан (Админ) — теперь с причиной
+// Мут и Бан (Админ) — с причиной
 app.post('/api/admin/chat-action', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, action, minutes, reason } = req.body;
@@ -383,8 +383,9 @@ app.post('/api/admin/inventory', (req, res) => {
     db.inventory = newInv; db.prices = newPrices; saveDB(); res.json({ success: true });
 });
 
+// Смена роли юзера
 app.post('/api/admin/set-role', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, role } = req.body;
     const allowedRoles = ['user', 'tester', 'moder', 'owner'];
     if (!allowedRoles.includes(role)) {
