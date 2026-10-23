@@ -10,6 +10,9 @@ const crypto = require('crypto');
 
 const app = express();
 
+// ВАЖНО ДЛЯ NETRUN (работа с сессиями через прокси)
+app.set('trust proxy', 1);
+
 function getMoscowTime() {
     const now = new Date();
     const mskTime = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60000));
