@@ -92,18 +92,33 @@
         .msg.user { background: #333; align-self: flex-start; }
         .msg.admin { background: var(--blue); color: #000; align-self: flex-end; }
         
-        .gc-msg { padding: 10px; border-radius: 5px; background: #111; border-left: 3px solid #333; display: flex; justify-content: space-between; gap: 10px;}
+        .gc-msg { padding: 10px; border-radius: 5px; background: #111; border-left: 3px solid #333; display: flex; justify-content: space-between; gap: 10px; position: relative; group: msg;}
         .gc-msg.role-owner { border-left-color: var(--gold); background: rgba(255, 183, 3, 0.05);}
         .gc-msg.role-moder { border-left-color: var(--accent); background: rgba(255, 77, 77, 0.05);}
         .gc-msg.role-tester { border-left-color: var(--blue); background: rgba(0, 210, 255, 0.05);}
+        .gc-msg.system-msg { border-left: none; background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.3); justify-content: center; text-align: center;}
         .gc-text { font-size: 14px; }
         .gc-header-info { font-size: 11px; color: #888; margin-bottom: 3px; display: flex; gap: 10px; align-items: center;}
         .gc-name { font-weight: bold; color: #fff;}
         .btn-del-msg { background: transparent; color: #ff4d4d; border: none; font-size: 18px; cursor: pointer; width: auto; padding: 0 5px;}
         
+        .gc-reply-quote { background: rgba(0,0,0,0.3); border-left: 3px solid #888; padding: 5px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 12px; color: #aaa; }
+        .gc-reply-quote b { color: var(--blue); }
+
+        .gc-actions { display: none; gap: 10px; position: absolute; top: -12px; right: 10px; background: #000; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
+        .gc-msg:hover .gc-actions { display: flex; }
+        .gc-actions button { background: transparent; border: none; cursor: pointer; font-size: 14px; color: #888; padding: 0; }
+        .gc-actions button:hover { color: var(--blue); }
+
         .pass-wrapper { position: relative; margin-bottom: 15px; }
         .pass-wrapper input { margin-bottom: 0; padding-right: 40px; }
         .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 20px; }
+
+        /* Команда */
+        .team-admin-list { display: flex; flex-direction: column; gap: 10px; }
+        .team-admin-item { display: flex; align-items: center; justify-content: space-between; background: #000; padding: 10px; border-radius: 5px; border-left: 3px solid var(--blue);}
+        .team-admin-info { font-size: 14px; font-weight: bold;}
+        .team-admin-role { font-size: 11px; color: #888; text-transform: uppercase;}
 
         /* МОДАЛЬНЫЕ ОКНА */
         .admin-modal-overlay {
@@ -197,6 +212,11 @@
                     <h3>Пользователи и Роли</h3>
                     <div id="users-list" style="max-height: 400px; overflow-y: auto;"></div>
                 </div>
+
+                <div class="panel">
+                    <h3>👥 Команда проекта</h3>
+                    <div id="team-admin-list" class="team-admin-list"></div>
+                </div>
             </div>
         </div>
 
@@ -232,6 +252,10 @@
 
             <div id="global-chat-layout" style="display: none; flex-direction: column; height: 500px;">
                 <div class="messages" id="admin-gc-box" style="background: #000; border: 1px solid var(--border); padding: 15px; border-radius: 5px; margin-bottom: 15px;"></div>
+                <div class="gc-reply-preview" id="gc-reply-preview" style="margin-bottom: 5px; border-radius: 5px; border: 1px solid #333; display: none; padding: 10px; justify-content: space-between; align-items: center;">
+                    <span id="gc-reply-text" style="font-size: 12px; color: #888;"></span>
+                    <button onclick="cancelReply()" style="width: auto; padding: 2px 8px; background: #ff4d4d; color: white; font-size: 10px;">X</button>
+                </div>
                 <div style="display: flex; gap: 10px;">
                     <input type="text" id="admin-gc-input" placeholder="Написать в общий чат (от лица KusKusik15)..." onkeypress="if(event.key === 'Enter') sendGlobalAdminMsg()">
                     <button onclick="sendGlobalAdminMsg()" style="width: 100px; background: var(--gold); color: #000;">➤</button>
@@ -279,6 +303,18 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА РЕДАКТИРОВАНИЯ СООБЩЕНИЯ -->
+    <div class="admin-modal-overlay" id="editMsgModal">
+        <div class="admin-modal">
+            <h3>✏️ Редактировать сообщение</h3>
+            <textarea id="edit-msg-text" rows="3"></textarea>
+            <div class="admin-modal-btns">
+                <button class="btn-cancel-modal" onclick="document.getElementById('editMsgModal').classList.remove('show')">Отмена</button>
+                <button class="btn-confirm-modal" onclick="saveEditedMsg()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function esc(s) {
             return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -314,8 +350,11 @@
         let pendingRoleChange = null;
         let pendingMute = null;
         let pendingBan = null;
-        // Запоминаем последний id в общем чате, чтобы понимать, надо ли перерисовывать
         let lastGlobalId = null;
+
+        // Для ответов и редактирования
+        let replyToId = null;
+        let editingMsgId = null;
 
         let seenAdmin = { seller: 0, support: 0, global: 0, users: {} };
         function loadSeenAdmin() {
@@ -365,8 +404,10 @@
                     if (!isFocusInside('news-list') && !isFocusInside('news-title') && !isFocusInside('news-content')) renderNews();
                     if (!isFocusInside('users-list') && !document.querySelector('.admin-modal-overlay.show')) renderUsers();
                     
+                    renderTeamAdmin();
+
                     if(currentChatType === 'global') {
-                        if (!isFocusInside('admin-gc-input')) renderGlobalAdminChat();
+                        if (!isFocusInside('admin-gc-input') && !isFocusInside('edit-msg-text')) renderGlobalAdminChat();
                     } else {
                         if (!isFocusInside('chat-users') && !isFocusInside('chat-messages') && !isFocusInside('admin-reply-input')) {
                             renderChatUsers(); 
@@ -380,6 +421,24 @@
                 isUpdating = false; 
                 loadDataTimerId = setTimeout(loadData, 5000); 
             }
+        }
+
+        // --- КОМАНДА В АДМИНКЕ ---
+        function renderTeamAdmin() {
+            const list = document.getElementById('team-admin-list');
+            if (!adminData.users) return;
+            
+            const team = adminData.users.filter(u => u.role && u.role !== 'user');
+            if (team.length === 0) { list.innerHTML = '<div style="color: #666;">В команде пока никого нет</div>'; return; }
+            
+            const roleNames = { owner: '👑 Владелец', moder: '🛡️ Модератор', tester: '🧪 Тестер' };
+            
+            list.innerHTML = team.map(u => `
+                <div class="team-admin-item">
+                    <div class="team-admin-info">${esc(u.name)}</div>
+                    <div class="team-admin-role">${roleNames[u.role] || u.role}</div>
+                </div>
+            `).join('');
         }
 
         function updateChatBadges() {
@@ -806,12 +865,53 @@
             } catch (e) { alert('Ошибка сети: ' + e.message); }
         }
 
-        // forceReload = true — перерисовать принудительно (после отправки)
+        // --- ОБЩИЙ ЧАТ (АДМИН) ---
+        function replyToMessage(msgId, text, name) {
+            replyToId = msgId;
+            document.getElementById('gc-reply-text').innerHTML = `<b>${name}:</b> ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`;
+            document.getElementById('gc-reply-preview').style.display = 'flex';
+            document.getElementById('admin-gc-input').focus();
+        }
+
+        function cancelReply() {
+            replyToId = null;
+            document.getElementById('gc-reply-preview').style.display = 'none';
+        }
+
+        function openEditMsgModal(msgId, oldText) {
+            editingMsgId = msgId;
+            document.getElementById('edit-msg-text').value = oldText;
+            document.getElementById('editMsgModal').classList.add('show');
+        }
+
+        async function saveEditedMsg() {
+            const text = document.getElementById('edit-msg-text').value.trim();
+            if (!text) return;
+            
+            const res = await fetch('/api/admin/global-chat/edit', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId: editingMsgId, text: text })
+            });
+            
+            document.getElementById('editMsgModal').classList.remove('show');
+            if (res.ok) {
+                loadData();
+                renderGlobalAdminChat(true);
+            } else {
+                alert('Ошибка редактирования');
+            }
+        }
+
+        function copyMsgText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Текст скопирован');
+            });
+        }
+
         function renderGlobalAdminChat(forceReload = false) {
             const box = document.getElementById('admin-gc-box');
             if (!adminData.globalChat) return;
             
-            // Проверяем, есть ли новые по id, а не по количеству
             const currentLastId = adminData.globalChat.length > 0 
                 ? adminData.globalChat[adminData.globalChat.length - 1].id 
                 : null;
@@ -824,22 +924,52 @@
             box.innerHTML = '';
             adminData.globalChat.forEach(m => {
                 let roleClass = '';
-                if (m.role === 'owner') roleClass = 'role-owner';
-                else if (m.role === 'moder') roleClass = 'role-moder';
-                else if (m.role === 'tester') roleClass = 'role-tester';
+                let badge = '';
+                let actionsHtml = `<div class="gc-actions">`;
+                let editedMark = m.edited ? `<span style="color:#ffb703; font-size:10px;">(Ред. ${m.edited})</span>` : '';
+                let replyHtml = '';
 
-                box.innerHTML += `
-                    <div class="gc-msg ${roleClass}">
-                        <div>
-                            <div class="gc-header-info">
-                                <span class="gc-name">${esc(m.name)}</span>
-                                <span>${m.time}</span>
-                            </div>
-                            <div class="gc-text">${esc(m.text)}</div>
+                if (m.replyTo) {
+                    const parent = adminData.globalChat.find(x => x.id === m.replyTo);
+                    if (parent) replyHtml = `<div class="gc-reply-quote"><b>${esc(parent.name)}:</b> ${esc(parent.text)}</div>`;
+                }
+
+                if (m.role === 'owner') { roleClass = 'role-owner'; badge = `<span style="background:#ffb703; color:#000; font-size:10px; padding:2px 5px; border-radius:4px;">ВЛАДЕЛЕЦ</span>`; }
+                else if (m.role === 'moder') { roleClass = 'role-moder'; badge = `<span style="background:#ff4d4d; color:#fff; font-size:10px; padding:2px 5px; border-radius:4px;">МОДЕР</span>`; }
+                else if (m.role === 'tester') { roleClass = 'role-tester'; badge = `<span style="background:#00d2ff; color:#000; font-size:10px; padding:2px 5px; border-radius:4px;">ТЕСТЕР</span>`; }
+                else if (m.role === 'system') { roleClass = 'system-msg'; }
+
+                if (m.role !== 'system') {
+                    actionsHtml += `<button onclick="copyMsgText('${m.text.replace(/'/g, "\\'")}')" title="Копировать">📋</button>`;
+                    actionsHtml += `<button onclick="replyToMessage('${m.id}', '${m.text.replace(/'/g, "\\'")}', '${esc(m.name)}')" title="Ответить">↩️</button>`;
+                    if (m.role === 'owner') {
+                        actionsHtml += `<button onclick="openEditMsgModal('${m.id}', '${m.text.replace(/'/g, "\\'")}')" title="Редактировать">✏️</button>`;
+                    }
+                }
+                actionsHtml += `</div>`;
+
+                if (m.role === 'system') {
+                    box.innerHTML += `
+                        <div class="gc-msg ${roleClass}" style="justify-content:center; text-align:center;">
+                            <div class="gc-text" style="color:#ff4d4d; font-size:13px;">${esc(m.text)} ${editedMark}</div>
                         </div>
-                        <button class="btn-del-msg" onclick="deleteGlobalMessage('${m.id}')" title="Удалить">×</button>
-                    </div>
-                `;
+                    `;
+                } else {
+                    box.innerHTML += `
+                        <div class="gc-msg ${roleClass}">
+                            ${actionsHtml}
+                            ${replyHtml}
+                            <div style="flex-grow: 1;">
+                                <div class="gc-header-info">
+                                    <span class="gc-name">${esc(m.name)} ${badge}</span>
+                                    <span>${m.time} ${editedMark}</span>
+                                </div>
+                                <div class="gc-text">${esc(m.text)}</div>
+                            </div>
+                            <button class="btn-del-msg" onclick="deleteGlobalMessage('${m.id}')" title="Удалить">×</button>
+                        </div>
+                    `;
+                }
             });
             box.scrollTop = box.scrollHeight;
         }
@@ -849,13 +979,16 @@
             const text = input.value.trim();
             if (!text) return;
             
+            const payload = { text };
+            if (replyToId) payload.replyTo = replyToId;
+            
             try {
                 const res = await fetch('/api/admin/global-chat/send', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text })
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
                 });
                 if (!res.ok) { alert('Ошибка отправки: ' + res.status); return; }
                 input.value = '';
-                // Загружаем свежие данные и принудительно перерисовываем чат
+                cancelReply();
                 await loadData();
                 renderGlobalAdminChat(true);
             } catch (e) { alert('Ошибка сети: ' + e.message); }
