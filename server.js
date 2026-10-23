@@ -177,7 +177,21 @@ app.post('/api/admin/global-chat/send', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const { text, replyTo } = req.body;
     if (!text) return res.status(400).json({});
-    db.globalChat.push({ id: crypto.randomUUID(), userId: 'owner', name: 'Kusik', role: 'owner', text, replyTo: replyTo || null, edited: null, time: getMoscowTime() });
+    
+    // Ищем твой реальный аккаунт KusKusik15 в базе
+    const owner = db.users.find(u => u.gameNick === 'KusKusik15' || u.name === 'KusKusik15');
+    const authorName = owner ? (owner.gameNick || owner.name) : 'KusKusik15';
+
+    db.globalChat.push({ 
+        id: crypto.randomUUID(), 
+        userId: owner ? owner.id : 'owner', 
+        name: authorName, 
+        role: 'owner', 
+        text, 
+        replyTo: replyTo || null, 
+        edited: null, 
+        time: getMoscowTime() 
+    });
     if (db.globalChat.length > 100) db.globalChat.shift();
     saveDB(); res.json({ success: true });
 });
@@ -233,7 +247,6 @@ app.post('/api/admin/chat-action', (req, res) => {
     saveDB(); res.json({ success: true });
 });
 
-// Модерация для модеров из магазина
 app.post('/api/mod/chat-action', (req, res) => {
     if (!req.user) return res.status(401).json({});
     const modUser = db.users.find(u => u.id === req.user.id);
@@ -336,7 +349,7 @@ app.post('/api/admin/login', (req, res) => {
     if (req.body.password === ADMIN_PASSWORD) { 
         req.session.isAdmin = true; 
         
-        let ownerUser = db.users.find(u => u.name === 'Kusik' || u.gameNick === 'Kusik');
+        let ownerUser = db.users.find(u => u.name === 'KusKusik15' || u.gameNick === 'KusKusik15');
         if (ownerUser) ownerUser.role = 'owner';
         
         saveDB(); res.json({ success: true }); 
