@@ -85,6 +85,7 @@ app.get('/api/user', (req, res) => {
     if (req.user) {
         const u = db.users.find(x => x.id === req.user.id);
         res.json({ 
+            id: u.id,
             name: u.name, 
             gameNick: u.gameNick, 
             avatar: u.avatar, 
@@ -97,6 +98,16 @@ app.get('/api/user', (req, res) => {
     } else {
         res.status(401).json({ error: 'Not logged in' });
     }
+});
+
+// Список команды (для магазина)
+app.get('/api/team', (req, res) => {
+    const team = db.users.filter(u => u.role && u.role !== 'user').map(u => ({
+        name: u.gameNick || u.name,
+        role: u.role,
+        avatar: u.avatar
+    }));
+    res.json(team);
 });
 
 // --- ОБЩИЙ ЧАТ ---
@@ -123,7 +134,7 @@ app.post('/api/global-chat', (req, res) => {
         }
     }
 
-    const { text } = req.body;
+    const { text, replyTo } = req.body;
     if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
 
     const newMsg = {
@@ -132,6 +143,8 @@ app.post('/api/global-chat', (req, res) => {
         name: user.gameNick || user.name,
         role: user.role || 'user',
         text: text,
+        replyTo: replyTo || null, // ID сообщения, на которое отвечают
+        edited: null,
         time: getMoscowTime()
     };
     
@@ -141,10 +154,26 @@ app.post('/api/global-chat', (req, res) => {
     res.json({ success: true });
 });
 
+// Редактирование своего сообщения
+app.post('/api/global-chat/edit', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    const { msgId, text } = req.body;
+    const msg = db.globalChat.find(m => m.id === msgId);
+    
+    if (!msg) return res.status(404).json({ message: 'Сообщение не найдено' });
+    if (msg.userId !== req.user.id) return res.status(403).json({ message: 'Это не ваше сообщение' });
+    
+    msg.text = text;
+    msg.edited = getMoscowTime();
+    saveDB();
+    res.json({ success: true });
+});
+
+// Отправка сообщения от АДМИНА (Владельца)
 app.post('/api/admin/global-chat/send', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     
-    const { text } = req.body;
+    const { text, replyTo } = req.body;
     if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
 
     const newMsg = {
@@ -153,11 +182,26 @@ app.post('/api/admin/global-chat/send', (req, res) => {
         name: 'KusKusik15',
         role: 'owner',
         text: text,
+        replyTo: replyTo || null,
+        edited: null,
         time: getMoscowTime()
     };
     
     db.globalChat.push(newMsg);
     if (db.globalChat.length > 100) db.globalChat.shift();
+    saveDB();
+    res.json({ success: true });
+});
+
+// Редактирование сообщения админом
+app.post('/api/admin/global-chat/edit', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { msgId, text } = req.body;
+    const msg = db.globalChat.find(m => m.id === msgId);
+    if (!msg) return res.status(404).json({ message: 'Сообщение не найдено' });
+    
+    msg.text = text;
+    msg.edited = getMoscowTime();
     saveDB();
     res.json({ success: true });
 });
@@ -169,7 +213,7 @@ app.post('/api/admin/global-chat/delete', (req, res) => {
     res.json({ success: true });
 });
 
-// Мут и Бан (Админ) — с причиной
+// Мут и Бан (Админ) — с причиной и системным сообщением в чат
 app.post('/api/admin/chat-action', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, action, minutes, reason } = req.body;
@@ -177,27 +221,49 @@ app.post('/api/admin/chat-action', (req, res) => {
     
     if (!user) return res.status(404).json({ message: 'Юзер не найден' });
 
+    let systemMsgText = '';
+
     if (action === 'mute') {
         let mins = parseInt(minutes) || 30;
         if (mins < 1) mins = 1;
         if (mins > 525600) mins = 525600;
         user.mutedUntil = new Date().getTime() + (mins * 60000);
         user.muteReason = reason || null;
+        
+        const until = new Date(user.mutedUntil).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+        systemMsgText = `🔇 Игрок ${user.gameNick || user.name} замучен до ${until}. ${reason ? 'Причина: ' + reason : ''}`;
     } else if (action === 'unmute') {
         user.mutedUntil = null;
         user.muteReason = null;
+        systemMsgText = `🔊 Игрок ${user.gameNick || user.name} размучен.`;
     } else if (action === 'ban') {
         user.isBanned = true;
         user.banReason = reason || null;
         user.mutedUntil = null;
         user.muteReason = null;
+        systemMsgText = `🚫 Игрок ${user.gameNick || user.name} забанен. ${reason ? 'Причина: ' + reason : ''}`;
     } else if (action === 'unban') {
         user.isBanned = false;
         user.banReason = null;
         user.mutedUntil = null;
         user.muteReason = null;
+        systemMsgText = `✅ Игрок ${user.gameNick || user.name} разбанен.`;
     }
     
+    if (systemMsgText) {
+        db.globalChat.push({
+            id: crypto.randomUUID(),
+            userId: 'system',
+            name: 'Система',
+            role: 'system',
+            text: systemMsgText,
+            replyTo: null,
+            edited: null,
+            time: getMoscowTime()
+        });
+        if (db.globalChat.length > 100) db.globalChat.shift();
+    }
+
     saveDB();
     res.json({ success: true });
 });
@@ -386,7 +452,7 @@ app.post('/api/admin/inventory', (req, res) => {
     db.inventory = newInv; db.prices = newPrices; saveDB(); res.json({ success: true });
 });
 
-// Смена роли юзера (БЕЗ защиты "последнего владельца")
+// Смена роли юзера
 app.post('/api/admin/set-role', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, role } = req.body;
@@ -396,8 +462,6 @@ app.post('/api/admin/set-role', (req, res) => {
     }
     const user = db.users.find(u => u.id === userId);
     if (!user) return res.status(404).json({ message: 'Юзер не найден' });
-
-    // Защита убрана — владельцев может быть много
 
     user.role = role;
     saveDB();
