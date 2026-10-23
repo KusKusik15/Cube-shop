@@ -6,15 +6,12 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const webpush = require('web-push');
-// [ФИКС 1] crypto добавлен (пригодится для randomUUID в следующей итерации)
 const crypto = require('crypto');
 
 const app = express();
 
-// Функция для получения московского времени (строка)
 function getMoscowTime() {
     const now = new Date();
-    // Сдвигаем время на UTC+3
     const mskTime = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60000));
     return mskTime.toLocaleString('ru-RU', { 
         day: '2-digit', month: '2-digit', year: 'numeric', 
@@ -96,17 +93,15 @@ app.post('/api/global-chat', (req, res) => {
     
     const user = db.users.find(u => u.id === req.user.id);
     
-    // Проверка на бан
     if (user.isBanned) return res.status(403).json({ message: 'Вы забанены в чате.' });
     
-    // Проверка на мут
     if (user.mutedUntil) {
         const now = new Date().getTime();
         if (now < user.mutedUntil) {
             const remainingMinutes = Math.ceil((user.mutedUntil - now) / 60000);
             return res.status(403).json({ message: `У вас мут еще на ${remainingMinutes} мин.` });
         } else {
-            user.mutedUntil = null; // Мут прошел
+            user.mutedUntil = null;
             saveDB();
         }
     }
@@ -129,7 +124,6 @@ app.post('/api/global-chat', (req, res) => {
     res.json({ success: true });
 });
 
-// Отправка сообщения от АДМИНА (Владельца)
 app.post('/api/admin/global-chat/send', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     
@@ -151,7 +145,6 @@ app.post('/api/admin/global-chat/send', (req, res) => {
     res.json({ success: true });
 });
 
-// Удаление сообщения (Админ)
 app.post('/api/admin/global-chat/delete', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     db.globalChat = db.globalChat.filter(m => m.id !== req.body.msgId);
@@ -159,7 +152,7 @@ app.post('/api/admin/global-chat/delete', (req, res) => {
     res.json({ success: true });
 });
 
-// Мут и Бан (Админ)
+// Мут и Бан (Админ) — теперь принимает любое количество минут
 app.post('/api/admin/chat-action', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, action, minutes } = req.body;
@@ -168,7 +161,13 @@ app.post('/api/admin/chat-action', (req, res) => {
     if (!user) return res.status(404).json({ message: 'Юзер не найден' });
 
     if (action === 'mute') {
-        user.mutedUntil = new Date().getTime() + (minutes * 60000);
+        // Максимум — 365 дней = 525600 минут
+        let mins = parseInt(minutes) || 30;
+        if (mins < 1) mins = 1;
+        if (mins > 525600) mins = 525600;
+        user.mutedUntil = new Date().getTime() + (mins * 60000);
+    } else if (action === 'unmute') {
+        user.mutedUntil = null;
     } else if (action === 'ban') {
         user.isBanned = true;
     } else if (action === 'unban') {
@@ -284,7 +283,19 @@ app.post('/api/chat', (req, res) => {
     const { text, type } = req.body;
     db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: type, text: text, time: getMoscowTime() });
     saveDB();
-    setTimeout(() => { db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'admin', type: type, text: 'Сообщение получено. Админ ответит позже (или в TG @Kusik155).', time: getMoscowTime() }); saveDB(); }, 1000);
+
+    let autoReply = 'Сообщение получено. Админ ответит позже.';
+    if (type === 'seller') {
+        autoReply = 'Сообщение отправлено продавцу (KusKusik15). Я свяжусь с вами для выдачи заказа, либо напишите мне в Telegram: @Kusik155';
+    } else if (type === 'support') {
+        autoReply = 'Ваше обращение принято в техподдержку. Пожалуйста, опишите проблему подробнее и ожидайте ответа администратора.';
+    }
+
+    setTimeout(() => { 
+        db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'admin', type: type, text: autoReply, time: getMoscowTime() }); 
+        saveDB(); 
+    }, 1000);
+
     res.json({ success: true });
 });
 
@@ -320,11 +331,9 @@ app.post('/api/order', (req, res) => {
 
 app.get('/auth/yandex', passport.authenticate('yandex'));
 app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
-// [ФИКС 4] При логауте чистим флаг админа
 app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); req.session.isAdmin = false; res.redirect('/'); }); });
 
 // --- АДМИНКА ---
-// [ФИКС 2] Пароль можно переопределить через env (по умолчанию 'admin')
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.post('/api/admin/login', (req, res) => { if (req.body.password === ADMIN_PASSWORD) { req.session.isAdmin = true; res.json({ success: true }); } else { res.status(401).json({}); } });
@@ -338,7 +347,8 @@ app.get('/api/admin/data', (req, res) => {
         name: u.gameNick || u.name, 
         role: u.role || 'user',
         isBanned: u.isBanned || false,
-        isMuted: u.mutedUntil && (new Date().getTime() < u.mutedUntil)
+        isMuted: u.mutedUntil && (new Date().getTime() < u.mutedUntil),
+        mutedUntil: u.mutedUntil || null
     }));
     res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news, globalChat: db.globalChat });
 });
@@ -351,7 +361,6 @@ app.post('/api/admin/inventory', (req, res) => {
     db.inventory = newInv; db.prices = newPrices; saveDB(); res.json({ success: true });
 });
 
-// [ФИКС 3] НОВЫЙ эндпоинт: смена роли юзера из админки
 app.post('/api/admin/set-role', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const { userId, role } = req.body;
@@ -362,7 +371,6 @@ app.post('/api/admin/set-role', (req, res) => {
     const user = db.users.find(u => u.id === userId);
     if (!user) return res.status(404).json({ message: 'Юзер не найден' });
 
-    // [ЗАЩИТА] Нельзя снять роль с последнего владельца
     if (user.role === 'owner' && role !== 'owner') {
         const ownersCount = db.users.filter(u => u.role === 'owner').length;
         if (ownersCount <= 1) {
