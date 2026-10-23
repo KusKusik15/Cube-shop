@@ -3,869 +3,1187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel | Cube Shop</title>
+    <title>Cube Shop | Магазин ресурсов</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #111; --panel: #1e1e1e; --text: #eee; --accent: #ff4d4d; --border: #333; --green: #28a745; --blue: #00d2ff; --gold: #ffb703;}
+        :root { --bg-dark: #061225; --bg-panel: #0f2442; --text-main: #e6f1ff; --text-muted: #8892b0; --accent: #00d2ff; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
-        body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+        body { background-color: var(--bg-dark); background-image: radial-gradient(circle at 50% 0%, #15305a 0%, #061225 70%); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
         
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
 
-        .login-box { max-width: 400px; margin: 100px auto; background: var(--panel); padding: 30px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
-        .login-box h2 { color: var(--accent); margin-bottom: 20px; }
-        
-        input, textarea, select { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 5px; margin-bottom: 15px; outline: none; font-family: inherit;}
-        input:focus, textarea:focus { border-color: var(--accent); }
-        button { background: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s;}
-        button:hover { opacity: 0.9; }
-        
-        #admin-panel { display: none; max-width: 1400px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px;}
-        .header h1 { color: var(--accent); font-size: 24px; }
-        .logout-btn { background: transparent; border: 1px solid var(--text); width: auto; padding: 8px 15px; }
+        header { background-color: rgba(6, 18, 37, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0, 210, 255, 0.2); display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; position: sticky; top: 0; z-index: 100;}
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .menu-btn { background: transparent; border: 1px solid var(--text-muted); color: var(--text-main); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 20px; transition: 0.3s; }
+        .menu-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .logo { font-size: 26px; font-weight: 800; color: var(--accent); text-transform: uppercase; }
+        .user-profile { display: flex; align-items: center; gap: 15px; cursor: pointer; padding: 5px 10px; border-radius: 20px; transition: 0.3s; }
+        .user-profile:hover { background: rgba(0, 210, 255, 0.1); }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--bg-dark); overflow: hidden; }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .user-name { font-weight: 600; color: var(--accent); }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px;}
-        .panel h3 { margin-bottom: 15px; color: #aaa; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+        .sidebar { position: fixed; top: 0; left: -350px; width: 320px; height: 100vh; background: #0a1120; z-index: 2000; transition: 0.3s; box-shadow: 5px 0 30px rgba(0,0,0,0.8); display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1);}
+        .sidebar.open { left: 0; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h2 { font-size: 20px; color: var(--accent); }
+        .close-btn { background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .sidebar-menu { flex-grow: 1; overflow-y: auto; padding: 10px 0; }
+        .menu-item { padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: var(--text-main); transition: 0.2s; border-left: 3px solid transparent; }
+        .menu-item:hover { background: rgba(0, 210, 255, 0.05); border-left-color: var(--accent); }
+        .menu-item.active { background: rgba(0, 210, 255, 0.1); border-left-color: var(--accent); color: var(--accent); font-weight: 600;}
+        .submenu { display: none; background: #050a14; padding: 10px 0; }
+        .submenu.open { display: block; }
+        .submenu-item { padding: 10px 20px 10px 40px; font-size: 14px; color: var(--text-muted); cursor: pointer; }
+        .submenu-item:hover { color: var(--accent); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1500; display: none; backdrop-filter: blur(2px);}
+        .overlay.show { display: block; }
 
-        .inv-category { margin-bottom: 20px; }
-        .inv-category-title { color: var(--blue); font-weight: bold; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px;}
-        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .inv-card { background: #000; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #222;}
-        .inv-card-name { font-size: 12px; margin-bottom: 8px; color: #ccc; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;}
-        
-        .inv-control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; gap: 5px;}
-        .inv-control-row span { font-size: 10px; color: #888; width: 25px; text-align: left;}
-        
-        .inv-controls { display: flex; justify-content: center; align-items: center; gap: 5px; flex-grow: 1;}
-        .inv-controls button { width: 25px; padding: 5px 0; background: #222; color: white; border: 1px solid #444; font-size: 14px;}
-        .inv-controls input { width: 40px; padding: 5px; margin-bottom: 0; text-align: center; border: 1px solid #444;}
-        .inv-controls input.price-input { color: #ffb703; border-color: #553300;}
+        .main-container { max-width: 1400px; margin: 0 auto; padding: 20px; flex-grow: 1; width: 100%; display: grid; grid-template-columns: 2fr 1fr; gap: 30px; align-items: start; }
 
-        .order-item { background: #000; padding: 15px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center; gap: 10px;}
-        .order-info { flex-grow: 1; }
-        .btn-complete { background: var(--green); width: auto; padding: 8px 15px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;}
+        .shop-column { width: 100%; }
         
-        .user-admin-item { background: #000; padding: 10px; border-radius: 5px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #222;}
-        .user-admin-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;}
-        .user-admin-name { font-weight: bold; font-size: 14px; }
-        .user-admin-info { font-size: 11px; color: #888;}
-        .role-select { width: auto; margin-bottom: 0; padding: 5px; font-size: 12px;}
-        .user-actions { display: flex; gap: 5px; flex-wrap: wrap; align-items: center;}
-        .btn-mini { padding: 5px 10px; font-size: 11px; width: auto; }
-        .btn-mute { background: #ffb703; color: #000; }
-        .btn-ban { background: #ff4d4d; color: #fff; }
-        .btn-unban { background: #28a745; color: #fff; }
-        .btn-unmute { background: #00d2ff; color: #000; }
+        .server-banner { background: linear-gradient(90deg, #ff0000, #cc0000); color: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; text-align: center; font-weight: 800; font-size: 18px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(255,0,0,0.3); letter-spacing: 1px;}
 
-        .mute-select { width: auto; margin-bottom: 0; padding: 5px; font-size: 12px; flex-grow: 1; min-width: 120px;}
-        .mute-custom { width: 60px; margin-bottom: 0; padding: 5px; font-size: 12px; text-align: center;}
+        .seller-nick-banner { background: rgba(0, 136, 204, 0.15); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 15px; }
+        .seller-nick-banner b { color: #00d2ff; font-size: 18px; text-shadow: 0 0 10px rgba(0, 210, 255, 0.4);}
 
-        .mute-info { font-size: 11px; color: #ffb703; display: flex; flex-direction: column; gap: 2px;}
-        .ban-info { font-size: 11px; color: #ff4d4d; }
-
-        .news-admin-item { background: #000; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 2px solid var(--blue); }
-        .news-admin-item.pinned { border-left-color: var(--gold); background: #111a11; }
-        .news-admin-date { font-size: 11px; color: #888; margin-bottom: 5px; display: flex; justify-content: space-between;}
-        .news-admin-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
-        .news-admin-content { font-size: 12px; color: #aaa; margin-bottom: 10px; white-space: pre-wrap; max-height: 60px; overflow-y: auto;}
-        .news-btns { display: flex; gap: 5px; flex-wrap: wrap; }
-        .news-btns button { width: auto; padding: 5px 10px; font-size: 11px;}
-
-        .chat-tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;}
-        .chat-tab { background: #000; border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: auto; position: relative; display: flex; align-items: center; gap: 6px;}
-        .chat-tab.active { background: var(--blue); color: #000; border-color: var(--blue); font-weight: bold;}
-        .chat-tab .tab-badge { background: #ff4d4d; color: white; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; display: none; }
+        .schedule-banner { background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 14px; }
+        .schedule-banner b { color: var(--accent); }
+        .tg-banner { background: rgba(0, 136, 204, 0.2); border: 1px solid #0088cc; padding: 10px; border-radius: 12px; margin-bottom: 30px; text-align: center; font-size: 14px; }
+        .tg-banner a { color: #00d2ff; font-weight: bold; text-decoration: none;}
+        .page-title { text-align: center; margin-bottom: 30px; font-weight: 800; text-shadow: 0 0 20px rgba(0,210,255,0.3); }
         
-        .chat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 15px; height: 500px; }
-        .user-list { background: #000; border-radius: 5px; overflow-y: auto; border: 1px solid var(--border); }
-        .user-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px;}
-        .user-item:hover, .user-item.active { background: #222; color: var(--blue); }
-        .user-item .user-badge { background: #ff4d4d; color: white; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; display: none;}
+        .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+        .card { background: linear-gradient(180deg, var(--bg-panel) 0%, #0a192f 100%); border-radius: 12px; padding: 25px 20px; text-align: center; border: 1px solid rgba(0, 210, 255, 0.2); display: flex; flex-direction: column; transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); border-color: var(--accent); }
+        .card.out-of-stock { opacity: 0.6; filter: grayscale(1); }
+        .card-img { width: 100px; height: 100px; margin: 0 auto 15px; object-fit: contain; }
+        .card h3 { font-size: 18px; margin-bottom: 5px; }
         
-        .chat-area { display: flex; flex-direction: column; background: #000; border-radius: 5px; border: 1px solid var(--border); padding: 15px; }
-        .messages { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .msg { padding: 10px; border-radius: 5px; max-width: 80%; font-size: 14px; }
-        .msg.user { background: #333; align-self: flex-start; }
-        .msg.admin { background: var(--blue); color: #000; align-self: flex-end; }
-        
-        .gc-msg { padding: 10px; border-radius: 5px; background: #111; border-left: 3px solid #333; display: flex; justify-content: space-between; gap: 10px;}
-        .gc-msg.role-owner { border-left-color: var(--gold); background: rgba(255, 183, 3, 0.05);}
-        .gc-msg.role-moder { border-left-color: var(--accent); background: rgba(255, 77, 77, 0.05);}
-        .gc-msg.role-tester { border-left-color: var(--blue); background: rgba(0, 210, 255, 0.05);}
-        .gc-text { font-size: 14px; }
-        .gc-header-info { font-size: 11px; color: #888; margin-bottom: 3px; display: flex; gap: 10px; align-items: center;}
-        .gc-name { font-weight: bold; color: #fff;}
-        .btn-del-msg { background: transparent; color: #ff4d4d; border: none; font-size: 18px; cursor: pointer; width: auto; padding: 0 5px;}
-        
-        .pass-wrapper { position: relative; margin-bottom: 15px; }
-        .pass-wrapper input { margin-bottom: 0; padding-right: 40px; }
-        .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 20px; }
+        .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; }
+        .quantity-control { display: flex; align-items: center; background: #061225; border: 1px solid rgba(0, 210, 255, 0.3); border-radius: 6px; overflow: hidden; }
+        .quantity-control button { background: transparent; border: none; color: var(--accent); font-size: 18px; font-weight: bold; width: 30px; height: 30px; cursor: pointer; }
+        .quantity-control input { width: 40px; background: transparent; border: none; color: white; text-align: center; font-size: 15px; font-weight: bold; outline: none; }
+        .card .price { font-size: 18px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+        .card .price span { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+        .buy-btn { background: linear-gradient(90deg, #00d2ff 0%, #0088cc 100%); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; }
+        .buy-btn:disabled { background: #333; color: #888; cursor: not-allowed; }
 
-        /* МОДАЛЬНЫЕ ОКНА */
-        .admin-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+        .news-column { background: var(--bg-panel); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 12px; padding: 20px; position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow-y: auto; }
+        .news-title-main { font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;}
+        
+        .news-card { background: #061225; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
+        .news-card.pinned { border: 2px solid #ffb703; border-left-width: 6px; background: #111a11; }
+        .pinned-badge { background: #ffb703; color: #000; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px;}
+        
+        .news-date { font-size: 12px; color: #888; margin-bottom: 5px; }
+        .news-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .news-content { font-size: 13px; line-height: 1.5; color: #ccc; white-space: pre-wrap; }
+
+        .reviews-section { margin-top: 40px; background: var(--bg-panel); padding: 30px; border-radius: 12px; border: 1px solid rgba(0,210,255,0.2); }
+        .reviews-title { font-size: 24px; font-weight: 800; margin-bottom: 20px; text-align: center; color: var(--accent);}
+        .rating-summary { display: flex; align-items: center; gap: 40px; margin-bottom: 30px; background: #061225; padding: 20px; border-radius: 12px;}
+        .rating-big { text-align: center; }
+        .rating-big .num { font-size: 48px; font-weight: 800; color: var(--accent); line-height: 1; }
+        .rating-big .stars { color: #ffb703; font-size: 20px; margin: 5px 0;}
+        .rating-big .count { color: var(--text-muted); font-size: 13px; }
+        .rating-bars { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+        .bar-row { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+        .bar-label { width: 15px; }
+        .bar-bg { flex-grow: 1; height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
+        .bar-fill { height: 100%; background: #ffb703; border-radius: 5px; }
+        .bar-count { width: 30px; text-align: right; color: var(--text-muted); font-size: 12px;}
+        .review-card { background: #061225; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
+        .review-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; }
+        .review-user { font-weight: bold; color: #fff; }
+        .review-stars { color: #ffb703; }
+        .review-text { font-size: 14px; color: var(--text-muted); }
+        .review-date { font-size: 11px; color: #555; text-align: right; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center; z-index: 3000; backdrop-filter: blur(5px); }
+        .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; border: 1px solid var(--accent); position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal.wide { max-width: 800px; }
+        .close-modal { position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .modal h3 { color: var(--accent); margin-bottom: 20px; text-align: center;}
+        
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
+        .form-input { width: 100%; padding: 12px; background: #061225; border: 1px solid rgba(0, 210, 255, 0.3); border-radius: 6px; color: white; outline: none; }
+        .auth-btn { background: var(--accent); color: #061225; border: none; padding: 12px; border-radius: 6px; font-weight: 800; cursor: pointer; width: 100%; transition: 0.3s; text-decoration: none; display: block; text-align: center; margin-bottom: 5px;}
+        .auth-btn:hover { background: #fff; box-shadow: 0 0 15px var(--accent); }
+        .auth-btn.cancel { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); }
+        
+        .chat-messages { height: 300px; overflow-y: auto; background: #061225; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;}
+        .msg { padding: 10px; border-radius: 8px; max-width: 80%; font-size: 14px; line-height: 1.4;}
+        .msg.user { background: var(--accent); color: var(--bg-dark); align-self: flex-end; border-bottom-right-radius: 0;}
+        .msg.admin { background: var(--bg-panel); border: 1px solid rgba(0,210,255,0.3); align-self: flex-start; border-bottom-left-radius: 0;}
+        .chat-input-row { display: flex; gap: 10px; }
+        
+        .avatar-upload { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .big-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--bg-dark); font-weight: bold; overflow: hidden;}
+        .big-avatar img { width: 100%; height: 100%; object-fit: cover;}
+
+        footer { padding: 20px; background: rgba(6, 18, 37, 0.8); border-top: 1px solid rgba(0, 210, 255, 0.1); display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;}
+        .footer-btn { background: transparent; border: none; color: var(--text-muted); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; position: relative;}
+        .footer-btn:hover { color: var(--accent); }
+
+        .notification-badge { background: #ff4d4d; color: white; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 10px; margin-left: 5px; box-shadow: 0 0 10px rgba(255, 77, 77, 0.5); display: none; min-width: 18px; text-align: center;}
+
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: var(--bg-panel); color: white; padding: 15px 20px; border-radius: 8px; border-left: 4px solid var(--accent); box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-size: 14px; font-weight: 600; transform: translateX(120%); transition: 0.3s; opacity: 0; display: flex; align-items: center; gap: 10px; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast.error { border-left-color: #ff4d4d; }
+        .toast.success { border-left-color: #00ff88; }
+
+        .order-item { background: #061225; border: 1px solid rgba(0,210,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; text-align: left; display: flex; flex-direction: column; gap: 10px;}
+        .order-info span { color: var(--accent); font-weight: bold;}
+        .order-date { font-size: 11px; color: #555; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; padding-bottom: 5px;}
+        
+        .btn-confirm-receipt { background: #28a745; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-dispute { background: #ff4d4d; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-cancel-order { background: #ffb703; color: black; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-review { background: #ffb703; color: black; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px;}
+        .btn-tg { background: #0088cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-bottom: 5px; text-decoration: none; display: block; text-align: center; box-sizing: border-box;}
+
+        .chat-link { color: #00d2ff; text-decoration: underline; cursor: pointer; font-weight: bold; }
+
+        #global-chat-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark);
+            z-index: 5000;
             display: none;
+            flex-direction: column;
+        }
+        
+        .gc-header {
+            background: rgba(6, 18, 37, 0.95);
+            padding: 15px 20px;
+            display: flex;
             align-items: center;
-            justify-content: center;
-            z-index: 9000;
-            backdrop-filter: blur(4px);
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 183, 3, 0.3);
         }
-        .admin-modal-overlay.show { display: flex; }
-        .admin-modal {
-            background: var(--panel);
-            border: 1px solid var(--blue);
-            border-radius: 12px;
-            padding: 30px;
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 210, 255, 0.2);
-            animation: modalIn 0.25s ease-out;
+        
+        .gc-title { font-size: 20px; font-weight: 800; color: #ffb703; display: flex; align-items: center; gap: 10px;}
+        
+        .gc-back-btn {
+            background: transparent;
+            border: 1px solid #ffb703;
+            color: #ffb703;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
         }
-        @keyframes modalIn {
-            from { opacity: 0; transform: scale(0.9) translateY(-10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .admin-modal h3 { color: var(--blue); margin-bottom: 15px; font-size: 22px; }
-        .admin-modal p { color: #ccc; margin-bottom: 20px; font-size: 15px; line-height: 1.5; }
-        .admin-modal b { color: #fff; }
-        .admin-modal .role-highlight { color: var(--gold); font-weight: 800; }
-        .admin-modal textarea { width: 100%; margin-bottom: 15px; }
-        .admin-modal-btns { display: flex; gap: 10px; }
-        .admin-modal-btns button { flex: 1; padding: 12px; font-size: 14px; }
-        .admin-modal-btns .btn-cancel-modal { background: transparent; border: 1px solid #666; color: #aaa; }
-        .admin-modal-btns .btn-confirm-modal { background: var(--green); }
-        .admin-modal-btns .btn-confirm-danger { background: var(--accent); }
+        .gc-back-btn:hover { background: #ffb703; color: #000; }
 
-        @media (max-width: 800px) {
-            body { padding: 10px; }
-            .grid { grid-template-columns: 1fr; }
-            .inv-grid { grid-template-columns: 1fr; }
-            .chat-layout { grid-template-columns: 1fr; height: auto; }
-            .user-list { height: 150px; }
-            .chat-area { height: 400px; }
-            .header h1 { font-size: 20px; }
-            .panel { padding: 15px; }
-            .order-item { flex-direction: column; align-items: flex-start; }
-            .btn-complete { width: 100%; margin-top: 10px; }
+        .gc-ban-banner {
+            background: rgba(255, 77, 77, 0.15);
+            border-bottom: 1px solid #ff4d4d;
+            color: #ff4d4d;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+        }
+        .gc-ban-banner.show { display: block; }
+        .gc-ban-banner b { color: #fff; }
+
+        .gc-messages-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333;}
+        .gc-header-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; color: #888; gap: 15px;}
+        .gc-text { font-size: 15px; color: #ddd; word-break: break-word; line-height: 1.4;}
+        
+        @keyframes gcFirstShow {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .gc-msg.gc-new { animation: gcFirstShow 0.35s ease-out; }
+
+        @keyframes ownerGlow {
+            0%, 100% { box-shadow: 0 0 8px rgba(255, 183, 3, 0.3), 0 0 15px rgba(255, 183, 3, 0.15); border-color: rgba(255, 183, 3, 0.6); }
+            50% { box-shadow: 0 0 15px rgba(255, 183, 3, 0.7), 0 0 30px rgba(255, 183, 3, 0.4); border-color: rgba(255, 183, 3, 1); }
+        }
+
+        .role-owner { 
+            border: 1px solid #ffb703; 
+            background: linear-gradient(90deg, rgba(255,183,3,0.12) 0%, rgba(15,36,66,1) 100%); 
+            animation: ownerGlow 2.5s ease-in-out infinite;
+        }
+        .role-owner .gc-name { color: #ffb703; font-weight: 800; text-shadow: 0 0 8px rgba(255,183,3,0.7); }
+        
+        .role-moder { border: 1px solid #ff4d4d; }
+        .role-moder .gc-name { color: #ff4d4d; font-weight: 800; }
+        .role-tester { border: 1px solid #00d2ff; }
+        .role-tester .gc-name { color: #00d2ff; font-weight: 800; }
+
+        .gc-badge { font-size: 10px; padding: 2px 5px; border-radius: 4px; margin-left: 5px;}
+        .gc-badge.owner { background: #ffb703; color: #000; }
+        .gc-badge.moder { background: #ff4d4d; color: #fff; }
+        .gc-badge.tester { background: #00d2ff; color: #000; }
+
+        .gc-input-area {
+            background: rgba(6, 18, 37, 0.95);
+            padding: 20px;
+            border-top: 1px solid #333;
+        }
+        
+        .gc-input-wrapper {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            gap: 15px;
+        }
+
+        .gc-input-wrapper input {
+            flex-grow: 1;
+            padding: 15px;
+            background: var(--bg-panel);
+            border: 1px solid rgba(255, 183, 3, 0.3);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+        .gc-input-wrapper input:focus { border-color: #ffb703; box-shadow: 0 0 15px rgba(255,183,3,0.2); }
+        .gc-input-wrapper input:disabled { background: #333; color: #888; cursor: not-allowed; border-color: #444;}
+        
+        .gc-send-btn {
+            background: #ffb703;
+            color: #000;
+            border: none;
+            padding: 0 25px;
+            border-radius: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .gc-send-btn:hover { background: #fff; box-shadow: 0 0 20px #ffb703; }
+        .gc-send-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none;}
+
+        @media (max-width: 900px) {
+            .main-container { grid-template-columns: 1fr; }
+            .news-column { position: static; max-height: none; order: -1; margin-bottom: 20px; }
+            .header-left { gap: 10px; }
+            .logo { font-size: 20px; }
+            .user-name { display: none; }
+            .schedule-banner, .tg-banner, .server-banner, .seller-nick-banner { font-size: 12px; padding: 10px; }
+        }
+
+        @media (max-width: 600px) {
+            header { padding: 10px 15px; }
+            .container { padding: 15px 10px; }
+            .server-banner { font-size: 14px; }
+            .items-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .card { padding: 15px 10px; border-radius: 10px; }
+            .card-img { width: 60px; height: 60px; margin-bottom: 8px; }
+            .card h3 { font-size: 13px; margin-bottom: 5px; line-height: 1.2;}
+            .price-row { padding: 5px; margin-bottom: 10px; flex-direction: column; gap: 5px; background: transparent;}
+            .quantity-control { width: 100%; justify-content: space-between; }
+            .quantity-control button { width: 25px; height: 25px; font-size: 16px; }
+            .quantity-control input { width: 30px; font-size: 14px; }
+            .card .price { font-size: 14px; }
+            .card .price span { font-size: 10px; }
+            .buy-btn { padding: 8px; font-size: 12px; border-radius: 6px; }
+            .rating-summary { flex-direction: column; gap: 20px; text-align: center; }
+            .rating-bars { width: 100%; }
+            .reviews-section { padding: 15px; }
+            
+            .gc-messages-container { padding: 10px; gap: 10px;}
+            .gc-msg { max-width: 95%; padding: 10px; }
+            .gc-input-area { padding: 10px; }
+            .gc-input-wrapper input { padding: 12px; }
+            footer { gap: 10px; padding: 15px 10px; }
+            .footer-btn { font-size: 13px; }
         }
     </style>
 </head>
 <body>
-    <div class="login-box" id="login-box">
-        <h2>Вход в Админку</h2>
-        <div class="pass-wrapper">
-            <input type="password" id="pass-input" placeholder="Пароль (admin)" onkeypress="if(event.key === 'Enter') login()">
-            <span onclick="togglePassword()" class="eye-icon" id="eye-icon">👁️</span>
+    <div id="toast-container"></div>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Меню</h2>
+            <button class="close-btn" onclick="toggleSidebar()">×</button>
         </div>
-        <button onclick="login()">Войти</button>
+        <div class="sidebar-menu">
+            <div class="menu-item active" onclick="filterCategory('all', this)">Главная</div>
+            
+            <div class="menu-item" onclick="openGlobalChat()" style="color: #ffb703; font-weight: bold;">🗣️ Общий чат</div>
+            
+            <div class="menu-item" onclick="toggleSubmenu('armor-submenu', this)"><span>Броня</span> <span>▼</span></div>
+            <div class="submenu" id="armor-submenu">
+                <div class="submenu-item" onclick="filterCategory('helmet', this)">Нашлемник</div>
+                <div class="submenu-item" onclick="filterCategory('chestplate', this)">Нагрудник</div>
+                <div class="submenu-item" onclick="filterCategory('leggings', this)">Штаны</div>
+                <div class="submenu-item" onclick="filterCategory('boots', this)">Сапоги</div>
+            </div>
+            <div class="menu-item" onclick="toggleSubmenu('metals-submenu', this)"><span>Металлы</span> <span>▼</span></div>
+            <div class="submenu" id="metals-submenu">
+                <div class="submenu-item" onclick="filterCategory('damass', this)">Дамасс</div>
+                <div class="submenu-item" onclick="filterCategory('steel', this)">Сталь</div>
+                <div class="submenu-item" onclick="filterCategory('iron', this)">Железо</div>
+                <div class="submenu-item" onclick="filterCategory('gold', this)">Золото</div>
+                <div class="submenu-item" onclick="filterCategory('copper', this)">Медь</div>
+                <div class="submenu-item" onclick="filterCategory('bronze', this)">Бронза</div>
+            </div>
+            <div class="menu-item" onclick="toggleSubmenu('tools-submenu', this)"><span>Инструменты</span> <span>▼</span></div>
+            <div class="submenu" id="tools-submenu">
+                <div class="submenu-item" onclick="filterCategory('sword', this)">Меч</div>
+                <div class="submenu-item" onclick="filterCategory('axe', this)">Топор</div>
+                <div class="submenu-item" onclick="filterCategory('pickaxe', this)">Кирка</div>
+                <div class="submenu-item" onclick="filterCategory('shovel', this)">Лопата</div>
+                <div class="submenu-item" onclick="filterCategory('spear', this)">Копьё</div>
+                <div class="submenu-item" onclick="filterCategory('mace', this)">Булава</div>
+                <div class="submenu-item" onclick="filterCategory('fishing_rod', this)">Удочка</div>
+            </div>
+            <div class="menu-item" onclick="filterCategory('food', this)">Еда</div>
+            <div class="menu-item" onclick="filterCategory('explosives', this)">Взрывчатка</div>
+            <div class="menu-item" onclick="filterCategory('materials', this)">Сырьё</div>
+            <div class="menu-item" onclick="filterCategory('interior', this)">Интерьер</div>
+            
+            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 10px 20px;"></div>
+            <div class="menu-item" onclick="openMyReviewsModal()" style="color: #ffb703;">⭐ Мои отзывы</div>
+        </div>
     </div>
 
-    <div id="admin-panel">
-        <div class="header">
-            <h1>🚨 Админ Панель</h1>
-            <button class="logout-btn" onclick="logout()">Выйти</button>
+    <header>
+        <div class="header-left">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="logo">Cube Shop</div>
         </div>
+        <div class="user-profile" onclick="openProfileModal()">
+            <div class="user-avatar" id="header-avatar">?</div>
+            <span id="user-name" class="user-name">Загрузка...</span>
+        </div>
+    </header>
 
-        <div class="grid">
-            <div class="panel">
-                <h3>Товары (Кол-во и Цена)</h3>
-                <div id="inventory-list" style="max-height: 600px; overflow-y: auto; padding-right: 10px;"></div>
-                <button onclick="saveInventory()" style="margin-top: 15px;">Сохранить всё</button>
+    <div id="auth-screen" style="display:none; align-items: center; justify-content: center; flex-grow: 1; padding: 20px;">
+         <div class="modal" style="display:block; position:static;">
+            <div style="display: flex; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div id="tab-login" onclick="switchAuthTab('login')" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: bold;">Вход</div>
+                <div id="tab-register" onclick="switchAuthTab('register')" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent;">Регистрация</div>
             </div>
+            <form id="form-login" onsubmit="handleLogin(event)" style="display: block;">
+                <div class="form-group"><input type="text" id="login-name" class="form-input" placeholder="Логин" required></div>
+                <div class="form-group"><input type="password" id="login-pass" class="form-input" placeholder="Пароль" required></div>
+                <button type="submit" class="auth-btn">Войти</button>
+            </form>
+            <form id="form-register" onsubmit="handleRegister(event)" style="display: none;">
+                <div class="form-group"><input type="text" id="reg-name" class="form-input" placeholder="Придумайте логин" required></div>
+                <div class="form-group"><input type="password" id="reg-pass" class="form-input" placeholder="Пароль" required></div>
+                <div class="form-group"><input type="text" id="reg-nick" class="form-input" placeholder="Ваш игровой ник в Cube Online" required></div>
+                <button type="submit" class="auth-btn">Создать аккаунт</button>
+            </form>
+            <div style="margin: 20px 0; text-align: center; color: var(--text-muted); font-size: 14px;">или</div>
+            <a href="/auth/yandex" class="auth-btn" style="background: #fc3f1d !important; color: white;">Войти через Яндекс ID</a>
+         </div>
+    </div>
 
-            <div style="display: flex; flex-direction: column;">
-                <div class="panel">
-                    <h3 id="news-form-title">Добавить новость</h3>
-                    <input type="hidden" id="edit-news-id">
-                    <input type="text" id="news-title" placeholder="Заголовок">
-                    <textarea id="news-content" rows="3" placeholder="Текст новости..."></textarea>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="saveNews()" style="background: var(--blue); color: #000;" id="news-submit-btn">Опубликовать</button>
-                        <button onclick="cancelEdit()" id="news-cancel-btn" style="background: #555; display: none;">Отмена</button>
-                    </div>
-                    
-                    <div id="news-list" style="margin-top: 15px; max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
+    <div id="shop-screen" style="display:none; flex-direction: column; flex-grow: 1;">
+        
+        <div class="main-container">
+            
+            <div class="shop-column">
+                <div class="server-banner">
+                    ⚠️ Магазин исключительно для сервера #3 АНАРХИЯ ПвП ⚠️
+                </div>
+
+                <div class="seller-nick-banner">
+                    👑 Продавец: <b>KusKusik15</b>
+                </div>
+
+                <div class="schedule-banner">
+                    🕒 <b>График выдачи:</b> Ежедневно с 16:00 до 22:00 (МСК). <br>Если не в графике, пишите в чат.
+                </div>
+                <div class="tg-banner">
+                    📱 Telegram владельца: <a href="https://t.me/Kusik155" target="_blank">@Kusik155</a>
                 </div>
                 
-                <div class="panel">
-                    <h3>Пользователи и Роли</h3>
-                    <div id="users-list" style="max-height: 400px; overflow-y: auto;"></div>
-                </div>
-            </div>
-        </div>
+                <h1 class="page-title" id="page-title">Магазин ресурсов</h1>
+                <div class="items-grid" id="shop-grid"></div>
 
-        <div class="panel">
-            <h3>Заказы</h3>
-            <div id="orders-list" style="max-height: 300px; overflow-y: auto;"></div>
-        </div>
-
-        <div class="panel" style="margin-top: 20px;">
-            <h3>Чаты</h3>
-            <div class="chat-tabs">
-                <button class="chat-tab active" id="tab-seller" onclick="switchChatTab('seller')">
-                    📦 Выдача заказов <span class="tab-badge" id="tab-badge-seller">0</span>
-                </button>
-                <button class="chat-tab" id="tab-support" onclick="switchChatTab('support')">
-                    🆘 Тех. Поддержка <span class="tab-badge" id="tab-badge-support">0</span>
-                </button>
-                <button class="chat-tab" id="tab-global" onclick="switchChatTab('global')">
-                    🗣️ Общий чат <span class="tab-badge" id="tab-badge-global">0</span>
-                </button>
-            </div>
-            
-            <div class="chat-layout" id="private-chats-layout">
-                <div class="user-list" id="chat-users"></div>
-                <div class="chat-area">
-                    <div class="messages" id="chat-messages"><div style="color: #666; text-align: center; margin-top: 50px;">Выберите пользователя</div></div>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="admin-reply-input" placeholder="Ответ..." onkeypress="if(event.key === 'Enter') sendReply()">
-                        <button onclick="sendReply()" style="width: 100px;">➤</button>
+                <div class="reviews-section">
+                    <div class="reviews-title">Отзывы покупателей</div>
+                    <div class="rating-summary">
+                        <div class="rating-big">
+                            <div class="num" id="avg-rating">0.0</div>
+                            <div class="stars" id="avg-stars">☆☆☆☆☆</div>
+                            <div class="count" id="total-reviews">0 отзывов</div>
+                        </div>
+                        <div class="rating-bars">
+                            <div class="bar-row"><div class="bar-label">5</div><div class="bar-bg"><div class="bar-fill" id="bar-5" style="width: 0%"></div></div><div class="bar-count" id="count-5">0</div></div>
+                            <div class="bar-row"><div class="bar-label">4</div><div class="bar-bg"><div class="bar-fill" id="bar-4" style="width: 0%"></div></div><div class="bar-count" id="count-4">0</div></div>
+                            <div class="bar-row"><div class="bar-label">3</div><div class="bar-bg"><div class="bar-fill" id="bar-3" style="width: 0%"></div></div><div class="bar-count" id="count-3">0</div></div>
+                            <div class="bar-row"><div class="bar-label">2</div><div class="bar-bg"><div class="bar-fill" id="bar-2" style="width: 0%"></div></div><div class="bar-count" id="count-2">0</div></div>
+                            <div class="bar-row"><div class="bar-label">1</div><div class="bar-bg"><div class="bar-fill" id="bar-1" style="width: 0%"></div></div><div class="bar-count" id="count-1">0</div></div>
+                        </div>
                     </div>
+                    <div id="public-reviews"></div>
                 </div>
             </div>
 
-            <div id="global-chat-layout" style="display: none; flex-direction: column; height: 500px;">
-                <div class="messages" id="admin-gc-box" style="background: #000; border: 1px solid var(--border); padding: 15px; border-radius: 5px; margin-bottom: 15px;"></div>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="admin-gc-input" placeholder="Написать в общий чат (от лица KusKusik15)..." onkeypress="if(event.key === 'Enter') sendGlobalAdminMsg()">
-                    <button onclick="sendGlobalAdminMsg()" style="width: 100px; background: var(--gold); color: #000;">➤</button>
+            <div class="news-column">
+                <div class="news-title-main">📰 Новости и обновления</div>
+                <div id="news-container"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        <button class="footer-btn" onclick="openOrdersModal()">
+            📦 Мои заказы <span class="notification-badge" id="notif-badge">0</span>
+        </button>
+        <button class="footer-btn" onclick="openGlobalChat()">
+            💬 Общий чат <span class="notification-badge" id="gc-badge">0</span>
+        </button>
+        <button class="footer-btn" onclick="openChatModal('seller')">
+            ✉️ Продавец <span class="notification-badge" id="seller-badge">0</span>
+        </button>
+        <button class="footer-btn" onclick="openChatModal('support')">
+            🆘 Поддержка <span class="notification-badge" id="support-badge">0</span>
+        </button>
+    </footer>
+
+    <div id="global-chat-screen">
+        <div class="gc-header">
+            <div class="gc-title">🗣️ Общий чат</div>
+            <button class="gc-back-btn" onclick="closeGlobalChat()">← Назад в магазин</button>
+        </div>
+        <div class="gc-ban-banner" id="gc-ban-banner"></div>
+        <div class="gc-messages-container" id="gc-box"></div>
+        <div class="gc-input-area">
+            <div class="gc-input-wrapper">
+                <input type="text" id="gc-input" placeholder="Напишите сообщение..." onkeypress="if(event.key === 'Enter') sendGlobalMessage()">
+                <button class="gc-send-btn" id="gc-send-btn" onclick="sendGlobalMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h3 style="font-size: 24px;">Подтверждение</h3>
+            <p style="text-align: center; font-size: 16px; margin-bottom: 20px;" id="confirm-text"></p>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); text-align: left;">
+                <b>Как получить товар:</b><br>
+                1. Создайте заказ на сайте.<br>
+                2. Напишите продавцу в игре (ник: <b>KusKusik15</b>) или <span class="chat-link" onclick="document.getElementById('confirmModal').style.display = 'none'; openChatModal('seller')">в чате на сайте</span>.<br>
+                3. Продавец пришлет вам запрос на обмен.<br>
+                4. Подтвердите обмен (вы кладете монеты, он кладет товар).
+                <br><br>
+                <i>Убедитесь, что ваш игровой ник верный. Выдача происходит вручную!</i>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="auth-btn cancel" onclick="document.getElementById('confirmModal').style.display = 'none'">Отмена</button>
+                <button class="auth-btn" onclick="executeBuy()">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('profileModal').style.display = 'none'">×</button>
+            <h3>Профиль</h3>
+            <div class="avatar-upload">
+                <div class="big-avatar" id="profile-avatar">?</div>
+                <div>
+                    <label for="avatar-file" class="auth-btn" style="display:inline-block; padding: 8px 15px; width: auto; cursor: pointer;">Загрузить фото</label>
+                    <input type="file" id="avatar-file" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
                 </div>
             </div>
-            
+            <div class="form-group">
+                <label>Игровой ник (для выдачи товара)</label>
+                <input type="text" id="profile-nick" class="form-input" placeholder="Ваш ник в игре">
+            </div>
+            <button class="auth-btn" onclick="saveProfile()" style="margin-bottom: 20px;">Сохранить профиль</button>
+            <h3 style="margin-top: 20px; font-size: 18px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">Смена пароля</h3>
+            <div class="form-group"><input type="password" id="old-pass" class="form-input" placeholder="Текущий пароль"></div>
+            <div class="form-group"><input type="password" id="new-pass" class="form-input" placeholder="Новый пароль"></div>
+            <button class="auth-btn" onclick="changePassword()" style="background: #0088cc; color:white; margin-bottom: 20px;">Сменить пароль</button>
+            <button class="auth-btn" onclick="window.location.href='/logout'" style="background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d;">Выйти</button>
         </div>
     </div>
 
-    <!-- МОДАЛКА СМЕНЫ РОЛИ -->
-    <div class="admin-modal-overlay" id="roleConfirmModal">
-        <div class="admin-modal">
-            <h3>Смена роли</h3>
-            <p id="role-confirm-text"></p>
-            <div class="admin-modal-btns">
-                <button class="btn-cancel-modal" onclick="cancelRoleChange()">Отмена</button>
-                <button class="btn-confirm-modal" onclick="confirmRoleChange()">Подтвердить</button>
+    <div class="modal-overlay" id="ordersModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('ordersModal').style.display = 'none'">×</button>
+            <h3>История покупок</h3>
+            <div id="orders-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="myReviewsModal">
+        <div class="modal wide">
+            <button class="close-modal" onclick="document.getElementById('myReviewsModal').style.display = 'none'">×</button>
+            <h3>Мои отзывы</h3>
+            <div id="my-reviews-list" style="max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chatModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('chatModal').style.display = 'none'">×</button>
+            <h3 style="text-align: left; font-size:18px; display: flex; align-items: center; gap: 10px;" id="chat-title">💬 Чат</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; text-align: left;" id="chat-desc"></p>
+            <div class="chat-messages" id="chat-box"></div>
+            <div class="chat-input-row">
+                <input type="text" id="chat-input" class="form-input" placeholder="Сообщение..." onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button class="auth-btn" style="width: 50px; padding: 0;" onclick="sendMessage()">➤</button>
             </div>
         </div>
     </div>
 
-    <!-- МОДАЛКА МУТА -->
-    <div class="admin-modal-overlay" id="muteModal">
-        <div class="admin-modal">
-            <h3>🔇 Замутить игрока</h3>
-            <p id="mute-confirm-text"></p>
-            <textarea id="mute-reason-input" rows="2" placeholder="Причина мута (необязательно)"></textarea>
-            <div class="admin-modal-btns">
-                <button class="btn-cancel-modal" onclick="cancelMute()">Отмена</button>
-                <button class="btn-confirm-modal" onclick="confirmMute()">Замутить</button>
+    <div class="modal-overlay" id="reviewModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('reviewModal').style.display = 'none'">×</button>
+            <h3>Оставить отзыв</h3>
+            <div style="text-align: center; font-size: 30px; margin-bottom: 15px; cursor: pointer;" id="star-rating">
+                <span onclick="setRating(1)" id="star1">☆</span>
+                <span onclick="setRating(2)" id="star2">☆</span>
+                <span onclick="setRating(3)" id="star3">☆</span>
+                <span onclick="setRating(4)" id="star4">☆</span>
+                <span onclick="setRating(5)" id="star5">☆</span>
             </div>
+            <div class="form-group">
+                <textarea id="review-text" class="form-input" rows="3" placeholder="Ваш отзыв..."></textarea>
+            </div>
+            <button class="auth-btn" onclick="submitReview()">Отправить</button>
         </div>
     </div>
 
-    <!-- МОДАЛКА БАНА -->
-    <div class="admin-modal-overlay" id="banModal">
-        <div class="admin-modal">
-            <h3>🚫 Забанить игрока</h3>
-            <p id="ban-confirm-text"></p>
-            <textarea id="ban-reason-input" rows="2" placeholder="Причина бана (необязательно)"></textarea>
-            <div class="admin-modal-btns">
-                <button class="btn-cancel-modal" onclick="cancelBan()">Отмена</button>
-                <button class="btn-confirm-danger" onclick="confirmBan()">Забанить</button>
-            </div>
+    <div class="modal-overlay" id="disputeModal">
+        <div class="modal">
+            <h3 style="color: #ff4d4d;">Товар не получен?</h3>
+            <p style="text-align: center; margin-bottom: 20px; font-size: 14px;">Если вы не получили товар, хотя статус изменился, свяжитесь с владельцем или поддержкой.</p>
+            <a href="https://t.me/Kusik155" target="_blank" class="auth-btn" style="background: #0088cc; margin-bottom: 10px;">Написать в Telegram @Kusik155</a>
+            <button class="auth-btn" style="background: #ff4d4d; margin-bottom: 10px;" onclick="document.getElementById('disputeModal').style.display = 'none'; openChatModal('support');">Написать в поддержку</button>
+            <button class="auth-btn cancel" onclick="document.getElementById('disputeModal').style.display = 'none'">Закрыть</button>
         </div>
     </div>
 
     <script>
-        function esc(s) {
-            return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        }
+        const catalog = [
+            { id: 'damass', name: 'Дамасский слиток', category: 'damass', img: 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.20.1/assets/minecraft/textures/item/netherite_ingot.png' },
+            { id: 'copper', name: 'Медный нагрудник', category: 'chestplate', img: 'https://minecraft.wiki/images/Copper_Chestplate_JE1_BE1.png' },
+            { id: 'cobble', name: 'Стак Булыжника', category: 'materials', img: 'https://minecraft.wiki/images/Cobblestone_JE5_BE3.png' },
+            { id: 'sword', name: 'Железный меч', category: 'sword', img: 'https://minecraft.wiki/images/Iron_Sword_JE2_BE2.png' },
+            { id: 'axe', name: 'Железный топор', category: 'axe', img: 'https://minecraft.wiki/images/Iron_Axe_JE2_BE2.png' },
+            { id: 'pickaxe', name: 'Железная кирка', category: 'pickaxe', img: 'https://minecraft.wiki/images/Iron_Pickaxe_JE2_BE2.png' },
+            { id: 'fishing_rod', name: 'Удочка', category: 'fishing_rod', img: 'https://minecraft.wiki/images/Fishing_Rod_JE2_BE2.png' }
+        ];
 
-        const itemDatabase = {
-            'Дамасс': { 'damass': 'Дамасский слиток' },
-            'Сталь': { 'steel': 'Стальной слиток' },
-            'Железо': { 'iron': 'Железный слиток' },
-            'Золото': { 'gold': 'Золотой слиток' },
-            'Медь': { 'copper': 'Медный слиток' },
-            'Бронза': { 'bronze': 'Бронзовый слиток' },
-            'Броня (Нашлемник)': { 'helmet_damass': 'Дамасский шлем', 'helmet_copper': 'Медный шлем' },
-            'Броня (Нагрудник)': { 'chestplate_damass': 'Дамасский нагрудник', 'copper': 'Медный нагрудник' },
-            'Броня (Штаны)': { 'leggings_damass': 'Дамасские штаны' },
-            'Броня (Сапоги)': { 'boots_damass': 'Дамасские сапоги' },
-            'Инструменты': { 'sword': 'Железный меч', 'axe': 'Железный топор', 'pickaxe': 'Железная кирка', 'shovel': 'Лопата', 'spear': 'Копьё', 'mace': 'Булава', 'fishing_rod': 'Удочка' },
-            'Еда': { 'apple': 'Яблоко', 'bread': 'Хлеб' },
-            'Взрывчатка': { 'tnt': 'Динамит' },
-            'Сырьё': { 'cobble': 'Стак Булыжника', 'wood': 'Древесина' },
-            'Интерьер': { 'table': 'Стол', 'chair': 'Стул' }
-        };
+        let currentUser = null;
+        let inventory = {};
+        let prices = {}; 
+        let currentCategory = 'all';
+        let cart = { damass: 1, copper: 1, cobble: 1, sword: 1, axe: 1, pickaxe: 1, fishing_rod: 1 };
+        let itemToBuy = null;
+        let currentChatMode = 'seller';
+        let currentRating = 5;
+        let reviewingOrderId = null;
+        let notificationInterval = null;
+        let globalChatInterval = null;
+        let chatCheckInterval = null;
+        let lastGlobalId = null;
 
-        function getItemName(id) {
-            for (const category in itemDatabase) {
-                if (itemDatabase[category][id]) return itemDatabase[category][id];
-            }
-            return id;
-        }
+        let seenCounts = { seller: 0, support: 0, global: 0 };
 
-        let adminData = null, currentChatUser = null, currentChatType = 'seller', isUpdating = false;
-        let loadDataTimerId = null;
-        let pendingRoleChange = null;
-        let pendingMute = null;
-        let pendingBan = null;
-
-        // Для кружочков: что мы уже видели
-        let seenAdmin = { seller: 0, support: 0, global: 0, users: {} };
-        function loadSeenAdmin() {
+        function loadSeenCounts() {
             try {
-                const stored = JSON.parse(localStorage.getItem('cubeShopAdminSeen') || '{}');
-                seenAdmin = { seller: stored.seller || 0, support: stored.support || 0, global: stored.global || 0, users: stored.users || {} };
+                const stored = JSON.parse(localStorage.getItem('cubeShopSeen') || '{}');
+                seenCounts = { seller: stored.seller || 0, support: stored.support || 0, global: stored.global || 0 };
             } catch(e) {}
         }
-        function saveSeenAdmin() {
-            try { localStorage.setItem('cubeShopAdminSeen', JSON.stringify(seenAdmin)); } catch(e) {}
+        function saveSeenCounts() {
+            try { localStorage.setItem('cubeShopSeen', JSON.stringify(seenCounts)); } catch(e) {}
         }
 
-        function togglePassword() { const i = document.getElementById('pass-input'); i.type = i.type === 'password' ? 'text' : 'password'; }
+        function switchAuthTab(tab) {
+            document.getElementById('tab-login').style.color = tab === 'login' ? 'var(--accent)' : 'var(--text-muted)';
+            document.getElementById('tab-login').style.borderBottom = tab === 'login' ? '2px solid var(--accent)' : '2px solid transparent';
+            document.getElementById('tab-register').style.color = tab === 'register' ? 'var(--accent)' : 'var(--text-muted)';
+            document.getElementById('tab-register').style.borderBottom = tab === 'register' ? '2px solid var(--accent)' : '2px solid transparent';
+            document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        function toggleSubmenu(id, element) {
+            const submenu = document.getElementById(id);
+            submenu.classList.toggle('open');
+            element.querySelector('span:last-child').innerText = submenu.classList.contains('open') ? '▲' : '▼';
+        }
+
+        function filterCategory(category, element) {
+            currentCategory = category;
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            if (element) {
+                if (element.classList.contains('submenu-item')) { element.closest('.submenu').previousElementSibling.classList.add('active'); } 
+                else { element.classList.add('active'); }
+            }
+            let title = "Магазин ресурсов";
+            if (category === 'damass') title = "Дамасс";
+            if (category === 'chestplate') title = "Нагрудники";
+            if (category === 'materials') title = "Сырьё";
+            if (category === 'sword' || category === 'axe' || category === 'pickaxe' || category === 'shovel' || category === 'spear' || category === 'mace' || category === 'fishing_rod') title = "Инструменты";
+            document.getElementById('page-title').innerText = title;
+            renderProducts();
+            if (window.innerWidth < 800) toggleSidebar();
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️';
+            toast.innerHTML = `<span class="toast-icon">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+        }
 
         window.onload = async () => {
-            loadSeenAdmin();
-            const res = await fetch('/api/admin/check'); const data = await res.json();
-            if (data.isAdmin) { document.getElementById('login-box').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; loadData(); }
+            loadSeenCounts();
+            try {
+                const res = await fetch('/api/user');
+                if (res.ok) { currentUser = await res.json(); showShop(); } 
+                else { document.getElementById('auth-screen').style.display = 'flex'; }
+            } catch(e) { document.getElementById('auth-screen').style.display = 'flex'; }
         };
 
-        async function login() {
-            const res = await fetch('/api/admin/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ password: document.getElementById('pass-input').value }) });
-            if (res.ok) { document.getElementById('login-box').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; loadData(); } else { alert('Неверный пароль!'); }
-        }
-        async function logout() { 
-            if (loadDataTimerId) { clearTimeout(loadDataTimerId); loadDataTimerId = null; }
-            await fetch('/api/admin/logout', { method: 'POST' }); 
-            window.location.reload(); 
+        async function handleLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ login: document.getElementById('login-name').value, password: document.getElementById('login-pass').value }) });
+            if (res.ok) { window.location.reload(); } else { showToast('Неверный логин или пароль', 'error'); }
         }
 
-        function isFocusInside(elId) {
-            const el = document.getElementById(elId);
-            if (!el) return false;
-            const active = document.activeElement;
-            return el.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+        async function handleRegister(e) {
+            e.preventDefault();
+            const res = await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ login: document.getElementById('reg-name').value, password: document.getElementById('reg-pass').value, gameNick: document.getElementById('reg-nick').value }) });
+            if (res.ok) { window.location.reload(); } else { const d = await res.json(); showToast(d.message, 'error'); }
         }
 
-        async function loadData() {
-            if (isUpdating) return; isUpdating = true;
+        async function showShop() {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('shop-screen').style.display = 'flex';
+            document.getElementById('user-name').innerText = currentUser.gameNick || currentUser.name;
+            const avatarBox = document.getElementById('header-avatar');
+            if (currentUser.avatar) avatarBox.innerHTML = `<img src="${currentUser.avatar}">`;
+            else avatarBox.innerText = (currentUser.name || '?')[0].toUpperCase();
+            document.getElementById('profile-avatar').innerHTML = avatarBox.innerHTML;
+            document.getElementById('profile-nick').value = currentUser.gameNick || '';
+
+            const invRes = await fetch('/api/inventory');
+            const invData = await invRes.json();
+            inventory = invData.inventory;
+            prices = invData.prices; 
+
+            renderProducts();
+            loadPublicReviews();
+            loadNews();
+            checkNotifications();
+            checkChatBadges();
+            
+            if(notificationInterval) clearInterval(notificationInterval);
+            notificationInterval = setInterval(checkNotifications, 30000);
+
+            if(chatCheckInterval) clearInterval(chatCheckInterval);
+            chatCheckInterval = setInterval(checkChatBadges, 10000);
+        }
+
+        async function checkNotifications() {
             try {
-                const res = await fetch('/api/admin/data');
-                if (res.ok) { 
-                    adminData = await res.json(); 
-                    if (!adminData.prices) adminData.prices = {};
-                    if (!isFocusInside('inventory-list')) renderInventory();
-                    if (!isFocusInside('orders-list')) renderOrders();
-                    if (!isFocusInside('news-list') && !isFocusInside('news-title') && !isFocusInside('news-content')) renderNews();
-                    if (!isFocusInside('users-list') && !document.querySelector('.admin-modal-overlay.show')) renderUsers();
+                const res = await fetch('/api/orders');
+                if (res.ok) {
+                    const orders = await res.json();
+                    const activeOrders = orders.filter(o => o.status === 'delivered' || o.status === 'dispute');
+                    const badge = document.getElementById('notif-badge');
+                    if (activeOrders.length > 0) { badge.innerText = activeOrders.length; badge.style.display = 'inline-block'; } 
+                    else { badge.style.display = 'none'; }
+                }
+            } catch(e) {}
+        }
+
+        async function checkChatBadges() {
+            try {
+                const chatRes = await fetch('/api/chat');
+                if (chatRes.ok) {
+                    const msgs = await chatRes.json();
+                    const sellerMsgs = msgs.filter(m => m.type === 'seller').length;
+                    const supportMsgs = msgs.filter(m => m.type === 'support').length;
                     
-                    if(currentChatType === 'global') {
-                        if (!isFocusInside('admin-gc-input')) renderGlobalAdminChat();
-                    } else {
-                        if (!isFocusInside('chat-users') && !isFocusInside('chat-messages') && !isFocusInside('admin-reply-input')) {
-                            renderChatUsers(); 
-                            if (currentChatUser) openChat(currentChatUser);
+                    const sellerUnread = Math.max(0, sellerMsgs - seenCounts.seller);
+                    const supportUnread = Math.max(0, supportMsgs - seenCounts.support);
+                    
+                    const sellerBadge = document.getElementById('seller-badge');
+                    const supportBadge = document.getElementById('support-badge');
+                    
+                    if (sellerUnread > 0) { sellerBadge.innerText = sellerUnread; sellerBadge.style.display = 'inline-block'; }
+                    else { sellerBadge.style.display = 'none'; }
+                    
+                    if (supportUnread > 0) { supportBadge.innerText = supportUnread; supportBadge.style.display = 'inline-block'; }
+                    else { supportBadge.style.display = 'none'; }
+                }
+
+                const gcRes = await fetch('/api/global-chat');
+                if (gcRes.ok) {
+                    const gcMsgs = await gcRes.json();
+                    const gcUnread = Math.max(0, gcMsgs.length - seenCounts.global);
+                    const gcBadge = document.getElementById('gc-badge');
+                    if (gcUnread > 0) { gcBadge.innerText = gcUnread; gcBadge.style.display = 'inline-block'; }
+                    else { gcBadge.style.display = 'none'; }
+                }
+            } catch(e) {}
+        }
+
+        async function loadNews() {
+            const res = await fetch('/api/news');
+            if (res.ok) {
+                const news = await res.json();
+                const container = document.getElementById('news-container');
+                if (news.length === 0) { container.innerHTML = '<div style="color: #888; text-align: center;">Пока новостей нет.</div>'; return; }
+                
+                container.innerHTML = news.map(n => `
+                    <div class="news-card ${n.pinned ? 'pinned' : ''}">
+                        ${n.pinned ? '<div class="pinned-badge">📌 ЗАКРЕПЛЕНО</div>' : ''}
+                        <div class="news-date">${n.date} ${n.edited ? `<span style="color:#ffb703; font-size:10px; margin-left:5px;">(Ред. ${n.edited})</span>` : ''}</div>
+                        <div class="news-title">${n.title}</div>
+                        <div class="news-content">${n.content}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = '';
+            const filtered = catalog.filter(item => {
+                if (currentCategory === 'all') return true;
+                return item.category === currentCategory;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 50px 0;">В этой категории пока нет товаров :(</div>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const stock = inventory[item.id] || 0;
+                const price = prices[item.id] || 0; 
+                const isOut = stock <= 0;
+                const currencyStr = 'монет'; 
+                const qty = cart[item.id] || 1;
+                const totalPrice = qty * price;
+
+                let stockColor = "#00ff88"; 
+                if (stock > 0 && stock <= 5) stockColor = "#ffb703"; 
+                if (isOut) stockColor = "#ff4d4d";
+
+                const card = document.createElement('div');
+                card.className = `card ${isOut ? 'out-of-stock' : ''}`;
+                card.innerHTML = `
+                    <img src="${item.img}" class="card-img">
+                    <h3>${item.name}</h3>
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 15px; color: ${stockColor}; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px;">
+                        ${isOut ? 'Нет в наличии' : `В наличии: ${stock} шт.`}
+                    </div>
+                    <div class="price-row">
+                        <div class="quantity-control">
+                            <button onclick="changeQty('${item.id}', -1)">-</button>
+                            <input type="number" id="qty-${item.id}" value="${qty}" min="1" max="99" onchange="handleManualQty('${item.id}', this.value)">
+                            <button onclick="changeQty('${item.id}', 1)">+</button>
+                        </div>
+                        <div class="price" id="price-${item.id}">${totalPrice} <span>${currencyStr}</span></div>
+                    </div>
+                    <button class="buy-btn" ${isOut ? 'disabled' : `onclick="openConfirm('${item.id}')"`}>${isOut ? 'Нет в наличии' : 'Купить'}</button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        async function loadPublicReviews() {
+            const res = await fetch('/api/reviews/all');
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('avg-rating').innerText = data.average;
+                document.getElementById('total-reviews').innerText = `${data.total} отзывов`;
+                let fullStars = Math.round(data.average);
+                let starsHtml = '';
+                for(let i=1; i<=5; i++) starsHtml += i <= fullStars ? '★' : '☆';
+                document.getElementById('avg-stars').innerText = starsHtml;
+
+                for (let star = 5; star >= 1; star--) {
+                    let count = data.stats[star] || 0;
+                    let percent = data.total > 0 ? (count / data.total) * 100 : 0;
+                    document.getElementById(`bar-${star}`).style.width = `${percent}%`;
+                    document.getElementById(`count-${star}`).innerText = count;
+                }
+
+                const container = document.getElementById('public-reviews');
+                if (data.reviews.length === 0) { container.innerHTML = '<div style="color: var(--text-muted); text-align: center;">Пока нет отзывов.</div>'; return; }
+                
+                container.innerHTML = data.reviews.map(r => {
+                    const product = catalog.find(c => c.id === r.itemId);
+                    const productName = product ? product.name : r.itemId;
+                    let stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+                    return `<div class="review-card"><div class="review-header"><span class="review-user">${r.userName} (${productName})</span><span class="review-stars">${stars}</span></div><div class="review-text">${r.text || 'Без текста'}</div><div class="review-date">${r.date}</div></div>`;
+                }).join('');
+            }
+        }
+
+        async function openMyReviewsModal() {
+            document.getElementById('myReviewsModal').style.display = 'flex';
+            const res = await fetch('/api/orders');
+            const list = document.getElementById('my-reviews-list');
+            if (res.ok) {
+                const orders = await res.json();
+                const reviewedOrders = orders.filter(o => o.status === 'completed' || o.status === 'cancelled_by_user' || o.status === 'cancelled_by_dispute');
+                if (reviewedOrders.length === 0) { list.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Нет заказов.</div>'; return; }
+                list.innerHTML = reviewedOrders.map(o => {
+                    const product = catalog.find(c => c.id === o.itemId);
+                    const productName = product ? product.name : o.itemId;
+                    let statusBadge = '';
+                    if (o.status === 'completed') statusBadge = '<span style="color: #00ff88">Завершен</span>';
+                    if (o.status === 'cancelled_by_user') statusBadge = '<span style="color:#888">Отменен (по желанию)</span>';
+                    if (o.status === 'cancelled_by_dispute') statusBadge = '<span style="color:#ff4d4d">Отменен (спор)</span>';
+                    
+                    return `<div class="order-item" style="flex-direction: row; justify-content: space-between;"><div class="order-info"><span class="order-date">${o.date}</span>Товар: <span>${productName}</span><br>Кол-во: <span>${o.qty}</span><br>Статус: ${statusBadge}</div><div style="width: 150px;">${(o.status === 'completed' && !o.reviewed) ? `<button class="auth-btn" style="font-size: 12px; padding: 10px; background: #ffb703; color: #000;" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>` : (o.reviewed ? '<span style="font-size:12px; color:#00ff88;">✅ Оставлен</span>' : '')}</div></div>`;
+                }).join('');
+            }
+        }
+
+        function changeQty(itemId, change) {
+            let newQty = cart[itemId] + change;
+            if (newQty < 1) newQty = 1;
+            if (newQty > 99) newQty = 99;
+            cart[itemId] = newQty;
+            updateItemPrice(itemId);
+        }
+
+        function handleManualQty(itemId, value) {
+            let newQty = parseInt(value);
+            if (isNaN(newQty) || newQty < 1) newQty = 1;
+            if (newQty > 99) newQty = 99;
+            cart[itemId] = newQty;
+            updateItemPrice(itemId);
+        }
+
+        function updateItemPrice(itemId) {
+            const qty = cart[itemId];
+            const price = prices[itemId] || 0;
+            document.getElementById(`qty-${itemId}`).value = qty;
+            document.getElementById(`price-${itemId}`).innerHTML = `${qty * price} <span>монет</span>`;
+        }
+
+        function openConfirm(itemId) {
+            if (!currentUser.gameNick) { showToast('Укажите ник в профиле!', 'error'); return; }
+            itemToBuy = itemId;
+            const item = catalog.find(i => i.id === itemId);
+            const price = prices[itemId] || 0;
+            const qty = cart[itemId];
+            
+            document.getElementById('confirm-text').innerHTML = `
+                Вы собираетесь купить <b style="color:var(--accent)">${item.name}</b> в количестве <b>${qty} шт.</b>.<br><br>
+                Итоговая стоимость: <b>${qty * price} монет</b>.<br><br>
+                Ваш игровой ник: <b style="color:var(--accent)">${currentUser.gameNick}</b>
+            `;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        async function executeBuy() {
+            if (!itemToBuy) return;
+            const res = await fetch('/api/order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ itemId: itemToBuy, qty: cart[itemToBuy], gameNick: currentUser.gameNick, currency: 'coins' }) });
+            const data = await res.json();
+            document.getElementById('confirmModal').style.display = 'none';
+            if (res.ok) { showToast('Заказ создан!', 'success'); cart[itemToBuy] = 1; const invRes = await fetch('/api/inventory'); const invData = await invRes.json(); inventory = invData.inventory; prices = invData.prices; renderProducts(); } else { showToast(data.message, 'error'); }
+        }
+
+        function openProfileModal() { document.getElementById('profileModal').style.display = 'flex'; }
+        function uploadAvatar(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) { document.getElementById('profile-avatar').innerHTML = `<img src="${event.target.result}">`; currentUser.tempAvatar = event.target.result; };
+            if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
+        }
+        async function saveProfile() {
+            const res = await fetch('/api/profile/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ gameNick: document.getElementById('profile-nick').value, avatar: currentUser.tempAvatar || currentUser.avatar }) });
+            if (res.ok) { showToast('Профиль сохранен!', 'success'); setTimeout(() => window.location.reload(), 1000); }
+        }
+
+        async function changePassword() {
+            const res = await fetch('/api/profile/password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ oldPass: document.getElementById('old-pass').value, newPass: document.getElementById('new-pass').value }) });
+            const data = await res.json();
+            if (res.ok) { showToast(data.message, 'success'); document.getElementById('old-pass').value = ''; document.getElementById('new-pass').value = ''; } else { showToast(data.message, 'error'); }
+        }
+
+        async function openOrdersModal() { 
+            document.getElementById('ordersModal').style.display = 'flex'; 
+            document.getElementById('notif-badge').style.display = 'none';
+            loadOrders(); 
+        }
+        
+        async function loadOrders() {
+            const res = await fetch('/api/orders'); const list = document.getElementById('orders-list');
+            if (res.ok) {
+                const orders = await res.json();
+                if (orders.length === 0) { list.innerHTML = '<div style="text-align:center;">Нет заказов.</div>'; return; }
+                
+                list.innerHTML = orders.reverse().map(o => {
+                    const product = catalog.find(c => c.id === o.itemId);
+                    const productName = product ? product.name : o.itemId;
+                    let statusHtml = '';
+                    let btnHtml = '';
+                    
+                    if (o.status === 'pending') {
+                        statusHtml = `<span style="color: #ffb703">Ожидает выдачи</span>`;
+                        btnHtml = `<button class="btn-cancel-order" onclick="cancelOrder('${o.id}')">Отменить заказ</button>`;
+                    } 
+                    else if (o.status === 'delivered') {
+                        statusHtml = `<span style="color: #00d2ff">Товар выдан (проверьте инвентарь)</span>`;
+                        btnHtml = `
+                            <button class="btn-confirm-receipt" onclick="confirmReceipt('${o.id}')">Подтвердить получение</button>
+                            <button class="btn-dispute" onclick="disputeOrder('${o.id}')">Товар не был получен</button>
+                        `;
+                    } 
+                    else if (o.status === 'dispute') {
+                        statusHtml = `<span style="color: #ff4d4d">Спор (товар не получен)</span>`;
+                        btnHtml = `
+                            <button class="btn-confirm-receipt resolve" onclick="confirmReceipt('${o.id}')">Проблема решена (товар получен)</button>
+                            <a href="https://t.me/Kusik155" target="_blank" class="btn-tg">Написать владельцу в TG</a>
+                            <button class="btn-dispute" onclick="openChatModal('support')">Написать в техподдержку</button>
+                            <button class="btn-cancel-order" style="background: #444; color: white; border: 1px solid #666;" onclick="cancelOrder('${o.id}')">Отменить заказ (проблема не решена)</button>
+                        `;
+                    } 
+                    else if (o.status === 'cancelled_by_user') {
+                        statusHtml = `<span style="color: #888">Отменен ${o.cancelDate ? `<span style="color:#888; font-size:10px;">(${o.cancelDate})</span>` : ''}</span>`;
+                    } 
+                    else if (o.status === 'cancelled_by_dispute') {
+                        statusHtml = `<span style="color: #ff4d4d">Отменен (спор не решен) ${o.cancelDate ? `<span style="color:#888; font-size:10px;">(${o.cancelDate})</span>` : ''}</span>`;
+                    }
+                    else {
+                        statusHtml = `<span style="color: #00ff88">Завершен</span>`;
+                        if (!o.reviewed) {
+                            btnHtml = `<button class="btn-review" onclick="openReviewModal('${o.id}')">Оставить отзыв</button>`;
+                        } else {
+                            btnHtml = `<span style="font-size: 12px; color: #00ff88; display:block; text-align: center;">✅ Отзыв оставлен</span>`;
                         }
                     }
-                    
-                    updateChatBadges();
+
+                    return `
+                    <div class="order-item">
+                        <span class="order-date">${o.date || 'Дата не указана'}</span>
+                        <div class="order-info">
+                            Товар: <span>${productName}</span><br>
+                            Кол-во: <span>${o.qty}</span><br>
+                            Статус: ${statusHtml}
+                        </div>
+                        ${btnHtml}
+                    </div>
+                `}).join('');
+            }
+        }
+
+        async function confirmReceipt(id) { if(!confirm('Точно получили?')) return; await fetch('/api/order/confirm-receipt', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:id})}); showToast('Завершено','success'); loadOrders(); setTimeout(()=>openReviewModal(id),500); }
+        async function disputeOrder(id) { if(!confirm('Не получили?')) return; await fetch('/api/order/dispute', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:id})}); document.getElementById('disputeModal').style.display='flex'; loadOrders(); }
+        async function cancelOrder(id) { if(!confirm('Отменить?')) return; await fetch('/api/order/cancel', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:id})}); showToast('Отменен','success'); loadOrders(); }
+
+        function openReviewModal(id) { reviewingOrderId = id; currentRating = 5; updateStars(); document.getElementById('review-text').value = ''; document.getElementById('reviewModal').style.display = 'flex'; }
+        function setRating(r) { currentRating = r; updateStars(); }
+        function updateStars() { for (let i = 1; i <= 5; i++) { const s = document.getElementById(`star${i}`); if (i <= currentRating) { s.innerText = '★'; s.style.color = '#ffb703'; } else { s.innerText = '☆'; s.style.color = '#555'; } } }
+        async function submitReview() {
+            await fetch('/api/reviews/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId: reviewingOrderId, rating: currentRating, text: document.getElementById('review-text').value }) });
+            document.getElementById('reviewModal').style.display = 'none'; showToast('Спасибо!', 'success'); loadOrders(); loadPublicReviews();
+        }
+
+        function openChatModal(mode) {
+            currentChatMode = mode;
+            document.getElementById('chat-title').innerText = mode === 'seller' ? '💬 Чат с продавцом' : '🆘 Поддержка';
+            document.getElementById('chatModal').style.display = 'flex'; loadChat();
+            markChatSeen(mode);
+        }
+
+        async function markChatSeen(mode) {
+            try {
+                const res = await fetch('/api/chat');
+                if (res.ok) {
+                    const msgs = await res.json();
+                    const count = msgs.filter(m => m.type === mode).length;
+                    seenCounts[mode] = count;
+                    saveSeenCounts();
+                    checkChatBadges();
                 }
-            } catch (e) {} finally { 
-                isUpdating = false; 
-                loadDataTimerId = setTimeout(loadData, 5000); 
+            } catch(e) {}
+        }
+
+        async function loadChat() {
+            const res = await fetch('/api/chat');
+            if (res.ok) { 
+                const msgs = await res.json(); 
+                const box = document.getElementById('chat-box'); 
+                box.innerHTML = ''; 
+                msgs.filter(m => m.type === currentChatMode).forEach(m => { box.innerHTML += `<div class="msg ${m.sender}">${m.text}</div>`; }); 
+                box.scrollTop = box.scrollHeight; 
             }
         }
-
-        // Кружочки у вкладок чатов
-        function updateChatBadges() {
-            if (!adminData) return;
-            
-            const sellerCount = adminData.messages.filter(m => m.type === 'seller').length;
-            const supportCount = adminData.messages.filter(m => m.type === 'support').length;
-            const globalCount = adminData.globalChat.length;
-            
-            // Обновляем вкладки
-            const sellerUnread = Math.max(0, sellerCount - seenAdmin.seller);
-            const supportUnread = Math.max(0, supportCount - seenAdmin.support);
-            const globalUnread = Math.max(0, globalCount - seenAdmin.global);
-            
-            const bs = document.getElementById('tab-badge-seller');
-            const bp = document.getElementById('tab-badge-support');
-            const bg = document.getElementById('tab-badge-global');
-            
-            if (sellerUnread > 0) { bs.innerText = sellerUnread; bs.style.display = 'inline-block'; } else bs.style.display = 'none';
-            if (supportUnread > 0) { bp.innerText = supportUnread; bp.style.display = 'inline-block'; } else bp.style.display = 'none';
-            if (globalUnread > 0) { bg.innerText = globalUnread; bg.style.display = 'inline-block'; } else bg.style.display = 'none';
+        async function sendMessage() {
+            const input = document.getElementById('chat-input'); const text = input.value.trim(); if (!text) return; input.value = '';
+            await fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text, type: currentChatMode }) });
+            loadChat(); setTimeout(loadChat, 1500); 
         }
 
-        function markAdminTabSeen(type) {
-            if (!adminData) return;
-            if (type === 'global') {
-                seenAdmin.global = adminData.globalChat.length;
-            } else {
-                seenAdmin[type] = adminData.messages.filter(m => m.type === type).length;
-            }
-            saveSeenAdmin();
-            updateChatBadges();
+        function openGlobalChat() {
+            document.getElementById('global-chat-screen').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            loadGlobalChat(true);
+            if(globalChatInterval) clearInterval(globalChatInterval);
+            globalChatInterval = setInterval(loadGlobalChat, 3000);
+            if (window.innerWidth < 800) toggleSidebar();
+            markGlobalSeen();
+            updateMuteBanner();
         }
 
-        function renderInventory() {
-            const list = document.getElementById('inventory-list'); list.innerHTML = '';
-            for (const [category, items] of Object.entries(itemDatabase)) {
-                let categoryHtml = `<div class="inv-category"><div class="inv-category-title">${category}</div><div class="inv-grid">`;
-                for (const [id, name] of Object.entries(items)) {
-                    let val = adminData.inventory[id] !== undefined ? adminData.inventory[id] : 0;
-                    let price = adminData.prices[id] !== undefined ? adminData.prices[id] : 0;
-                    
-                    categoryHtml += `
-                        <div class="inv-card">
-                            <div class="inv-card-name">${name}</div>
-                            <div class="inv-control-row">
-                                <span>Кол-во:</span>
-                                <div class="inv-controls">
-                                    <button onclick="changeInv('${id}', -1)">-</button>
-                                    <input type="number" id="inv-${id}" value="${val}" min="0">
-                                    <button onclick="changeInv('${id}', 1)">+</button>
-                                </div>
-                            </div>
-                            <div class="inv-control-row">
-                                <span>Цена:</span>
-                                <div class="inv-controls">
-                                    <button onclick="changePrice('${id}', -1)">-</button>
-                                    <input type="number" class="price-input" id="price-${id}" value="${price}" min="0" placeholder="0">
-                                    <button onclick="changePrice('${id}', 1)">+</button>
-                                </div>
-                            </div>
-                        </div>`;
+        function closeGlobalChat() {
+            document.getElementById('global-chat-screen').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            if(globalChatInterval) clearInterval(globalChatInterval);
+        }
+
+        async function markGlobalSeen() {
+            try {
+                const res = await fetch('/api/global-chat');
+                if (res.ok) {
+                    const msgs = await res.json();
+                    seenCounts.global = msgs.length;
+                    saveSeenCounts();
+                    checkChatBadges();
                 }
-                categoryHtml += `</div></div>`;
-                list.innerHTML += categoryHtml;
-            }
+            } catch(e) {}
         }
 
-        function changeInv(id, change) {
-            const input = document.getElementById(`inv-${id}`);
-            let val = parseInt(input.value) || 0;
-            val += change; if (val < 0) val = 0; input.value = val;
-        }
-
-        function changePrice(id, change) {
-            const input = document.getElementById(`price-${id}`);
-            let val = parseInt(input.value) || 0;
-            val += change; if (val < 0) val = 0; input.value = val;
-        }
-
-        async function saveInventory() {
-            let newInv = {}; let newPrices = {};
-            document.querySelectorAll('#inventory-list input[id^="inv-"]').forEach(input => { newInv[input.id.replace('inv-', '')] = parseInt(input.value) || 0; });
-            document.querySelectorAll('#inventory-list input[id^="price-"]').forEach(input => { newPrices[input.id.replace('price-', '')] = parseInt(input.value) || 0; });
-
-            const res = await fetch('/api/admin/inventory', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ inventory: newInv, prices: newPrices }) });
-            if(res.ok) alert('Товары и цены сохранены!');
-            else alert('Ошибка при сохранении');
-        }
-
-        function renderUsers() {
-            const list = document.getElementById('users-list'); list.innerHTML = '';
-            if (!adminData.users) return;
+        async function updateMuteBanner() {
+            const banner = document.getElementById('gc-ban-banner');
+            const input = document.getElementById('gc-input');
+            const sendBtn = document.getElementById('gc-send-btn');
             
-            adminData.users.forEach(u => {
-                let actionBtns = '';
+            try {
+                const res = await fetch('/api/user');
+                if (!res.ok) return;
+                const u = await res.json();
+                
                 if (u.isBanned) {
-                    actionBtns = `<button class="btn-mini btn-unban" onclick="chatAction('${u.id}', 'unban')">Разбанить</button>`;
+                    banner.classList.add('show');
+                    banner.innerHTML = `<b>🚫 Вы забанены в чате.</b>${u.banReason ? ' Причина: <b>' + u.banReason + '</b>' : ''}`;
+                    input.disabled = true;
+                    sendBtn.disabled = true;
+                    input.placeholder = 'Вы забанены в чате';
+                } else if (u.mutedUntil && new Date(u.mutedUntil).getTime() > Date.now()) {
+                    const until = new Date(u.mutedUntil).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+                    banner.classList.add('show');
+                    banner.innerHTML = `<b>🔇 Вы в муте до ${until}.</b>${u.muteReason ? ' Причина: <b>' + u.muteReason + '</b>' : ''}`;
+                    input.disabled = true;
+                    sendBtn.disabled = true;
+                    input.placeholder = 'Вы в муте';
                 } else {
-                    let muteControls = '';
-                    if (u.isMuted) {
-                        const until = u.mutedUntil ? new Date(u.mutedUntil).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
-                        muteControls = `
-                            <button class="btn-mini btn-unmute" onclick="chatAction('${u.id}', 'unmute')">Снять мут</button>
-                            <div class="mute-info">
-                                <span>Мут до: ${until}</span>
-                                ${u.muteReason ? `<span>Причина: ${esc(u.muteReason)}</span>` : ''}
-                            </div>
-                        `;
-                    } else {
-                        muteControls = `
-                            <select class="mute-select" id="mute-time-${u.id}">
-                                <option value="30">30 минут</option>
-                                <option value="60">1 час</option>
-                                <option value="360">6 часов</option>
-                                <option value="1440">1 день</option>
-                                <option value="10080">7 дней</option>
-                                <option value="43200">30 дней</option>
-                                <option value="525600">365 дней</option>
-                                <option value="custom">Своё...</option>
-                            </select>
-                            <input type="number" class="mute-custom" id="mute-custom-${u.id}" placeholder="мин" min="1" max="525600" style="display: none;">
-                            <button class="btn-mini btn-mute" onclick="openMuteModal('${u.id}')">Мут</button>
-                        `;
+                    banner.classList.remove('show');
+                    input.disabled = false;
+                    sendBtn.disabled = false;
+                    input.placeholder = 'Напишите сообщение...';
+                }
+            } catch(e) {}
+        }
+
+        // forceReload = true — перерисовать принудительно (после отправки)
+        async function loadGlobalChat(forceReload = false) {
+            const res = await fetch('/api/global-chat');
+            if (res.ok) {
+                const msgs = await res.json();
+                const box = document.getElementById('gc-box');
+                
+                const currentLastId = msgs.length > 0 ? msgs[msgs.length - 1].id : null;
+                const nothingChanged = !forceReload && currentLastId === lastGlobalId && box.children.length > 0;
+                
+                if (nothingChanged) return;
+                
+                const prevCount = box.children.length;
+                const isFirstLoad = prevCount === 0;
+                
+                box.innerHTML = '';
+                lastGlobalId = currentLastId;
+                
+                msgs.forEach((m, idx) => {
+                    let roleClass = 'role-user';
+                    let badge = '';
+
+                    if (m.role === 'owner') {
+                        roleClass = 'role-owner';
+                        badge = `<span class="gc-badge owner">ВЛАДЕЛЕЦ</span>`;
+                    } else if (m.role === 'moder') {
+                        roleClass = 'role-moder';
+                        badge = `<span class="gc-badge moder">МОДЕР</span>`;
+                    } else if (m.role === 'tester') {
+                        roleClass = 'role-tester';
+                        badge = `<span class="gc-badge tester">ТЕСТЕР</span>`;
                     }
-                    actionBtns = `${muteControls}<button class="btn-mini btn-ban" onclick="openBanModal('${u.id}')">Бан</button>`;
-                }
 
-                let roleLabel = u.role === 'owner' ? '👑 Владелец' : (u.role === 'moder' ? '🛡️ Модер' : (u.role === 'tester' ? '🧪 Тестер' : '👤 Игрок'));
+                    const isNew = isFirstLoad || idx >= prevCount;
+                    const animClass = isNew ? 'gc-new' : '';
 
-                let banInfoHtml = '';
-                if (u.isBanned && u.banReason) {
-                    banInfoHtml = `<div class="ban-info">Причина бана: ${esc(u.banReason)}</div>`;
-                }
-
-                list.innerHTML += `
-                    <div class="user-admin-item">
-                        <div class="user-admin-row">
-                            <span class="user-admin-name">${esc(u.name)}</span>
-                            <span style="font-size: 11px; color: #00d2ff;">${roleLabel}</span>
-                        </div>
-                        ${banInfoHtml}
-                        <div class="user-admin-row">
-                            <select class="role-select" onchange="changeRole('${u.id}', this.value, this)">
-                                <option value="user" ${u.role === 'user' ? 'selected' : ''}>Игрок</option>
-                                <option value="tester" ${u.role === 'tester' ? 'selected' : ''}>Тестер</option>
-                                <option value="moder" ${u.role === 'moder' ? 'selected' : ''}>Модер</option>
-                                <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
-                            </select>
-                        </div>
-                        <div class="user-actions">${actionBtns}</div>
-                    </div>
-                `;
-            });
-
-            document.querySelectorAll('.mute-select').forEach(sel => {
-                sel.addEventListener('change', function() {
-                    const userId = this.id.replace('mute-time-', '');
-                    const customInput = document.getElementById(`mute-custom-${userId}`);
-                    if (this.value === 'custom') customInput.style.display = 'inline-block';
-                    else customInput.style.display = 'none';
-                });
-            });
-        }
-
-        // --- МОДАЛКА МУТА ---
-        function openMuteModal(userId) {
-            const user = adminData.users.find(u => u.id === userId);
-            if (!user) return;
-            
-            const sel = document.getElementById(`mute-time-${userId}`);
-            let minutes = sel.value;
-            let timeLabel = '';
-            
-            if (minutes === 'custom') {
-                const custom = document.getElementById(`mute-custom-${userId}`);
-                minutes = parseInt(custom.value);
-                if (!minutes || minutes < 1) return alert('Введите количество минут (минимум 1)');
-                if (minutes > 525600) minutes = 525600;
-                timeLabel = `${minutes} минут`;
-            } else {
-                timeLabel = sel.options[sel.selectedIndex].text;
-            }
-            
-            pendingMute = { userId, minutes: parseInt(minutes) };
-            
-            document.getElementById('mute-confirm-text').innerHTML = 
-                `Замутить игрока <b>${esc(user.name)}</b> на <b>${timeLabel}</b>?`;
-            document.getElementById('mute-reason-input').value = '';
-            document.getElementById('muteModal').classList.add('show');
-        }
-
-        function cancelMute() {
-            document.getElementById('muteModal').classList.remove('show');
-            pendingMute = null;
-        }
-
-        async function confirmMute() {
-            if (!pendingMute) return;
-            const reason = document.getElementById('mute-reason-input').value.trim();
-            document.getElementById('muteModal').classList.remove('show');
-            
-            await chatAction(pendingMute.userId, 'mute', pendingMute.minutes, reason);
-            pendingMute = null;
-        }
-
-        // --- МОДАЛКА БАНА ---
-        function openBanModal(userId) {
-            const user = adminData.users.find(u => u.id === userId);
-            if (!user) return;
-            
-            pendingBan = { userId };
-            
-            document.getElementById('ban-confirm-text').innerHTML = 
-                `Забанить игрока <b>${esc(user.name)}</b>? Он не сможет писать в чат.`;
-            document.getElementById('ban-reason-input').value = '';
-            document.getElementById('banModal').classList.add('show');
-        }
-
-        function cancelBan() {
-            document.getElementById('banModal').classList.remove('show');
-            pendingBan = null;
-        }
-
-        async function confirmBan() {
-            if (!pendingBan) return;
-            const reason = document.getElementById('ban-reason-input').value.trim();
-            document.getElementById('banModal').classList.remove('show');
-            
-            await chatAction(pendingBan.userId, 'ban', 0, reason);
-            pendingBan = null;
-        }
-
-        // --- СМЕНА РОЛИ ---
-        function changeRole(userId, newRole, selectEl) {
-            const user = adminData.users.find(u => u.id === userId);
-            const roleNames = { user: 'Игрок', tester: 'Тестер', moder: 'Модер', owner: 'Владелец' };
-            pendingRoleChange = { userId, newRole, selectEl, oldRole: user ? user.role : 'user' };
-            
-            document.getElementById('role-confirm-text').innerHTML = 
-                `Выдать игроку <b>${esc(user ? user.name : 'Неизвестный')}</b> роль <span class="role-highlight">${roleNames[newRole] || newRole}</span>?`;
-            document.getElementById('roleConfirmModal').classList.add('show');
-        }
-
-        function cancelRoleChange() {
-            document.getElementById('roleConfirmModal').classList.remove('show');
-            if (pendingRoleChange && pendingRoleChange.selectEl) {
-                pendingRoleChange.selectEl.value = pendingRoleChange.oldRole;
-            }
-            pendingRoleChange = null;
-        }
-
-        async function confirmRoleChange() {
-            if (!pendingRoleChange) return;
-            const { userId, newRole } = pendingRoleChange;
-            document.getElementById('roleConfirmModal').classList.remove('show');
-            pendingRoleChange = null;
-            
-            try {
-                const res = await fetch('/api/admin/set-role', { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({ userId, role: newRole }) 
-                });
-                if (!res.ok) { alert('Не удалось изменить роль (ошибка сервера)'); loadData(); }
-                else { loadData(); }
-            } catch (e) {
-                alert('Ошибка сети: ' + e.message);
-                loadData();
-            }
-        }
-
-        async function chatAction(userId, action, minutes = 0, reason = '') {
-            try {
-                const res = await fetch('/api/admin/chat-action', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId, action, minutes, reason }) });
-                if (!res.ok) alert('Ошибка действия: ' + res.status);
-                loadData();
-            } catch (e) { alert('Ошибка сети: ' + e.message); }
-        }
-
-        function renderNews() {
-            const list = document.getElementById('news-list'); list.innerHTML = '';
-            if (!adminData.news) return;
-            adminData.news.forEach(n => {
-                list.innerHTML += `
-                <div class="news-admin-item ${n.pinned ? 'pinned' : ''}">
-                    <div class="news-admin-date">${n.date} ${n.edited ? `(Ред. ${n.edited})` : ''} ${n.pinned ? '📌' : ''}</div>
-                    <div class="news-admin-title">${esc(n.title)}</div>
-                    <div class="news-admin-content">${esc(n.content)}</div>
-                    <div class="news-btns">
-                        <button onclick="togglePin('${n.id}')" style="background: #ffb703; color: #000;">${n.pinned ? 'Открепить' : 'Закрепить'}</button>
-                        <button onclick="editNews('${n.id}')" style="background: var(--blue); color: #000;">Ред.</button>
-                        <button onclick="deleteNews('${n.id}')" style="background: #ff4d4d;">Удалить</button>
-                    </div>
-                </div>`;
-            });
-        }
-
-        async function togglePin(id) { await fetch('/api/admin/news/pin', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadData(); }
-        async function saveNews() {
-            const id = document.getElementById('edit-news-id').value;
-            const title = document.getElementById('news-title').value;
-            const content = document.getElementById('news-content').value;
-            if (!title || !content) return alert('Заполните заголовок и текст!');
-            const url = id ? '/api/admin/news/edit' : '/api/admin/news';
-            const body = id ? { id, title, content } : { title, content };
-            await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-            cancelEdit(); loadData();
-        }
-        function editNews(id) {
-            const newsItem = adminData.news.find(n => n.id === id); if (!newsItem) return;
-            document.getElementById('edit-news-id').value = newsItem.id;
-            document.getElementById('news-title').value = newsItem.title;
-            document.getElementById('news-content').value = newsItem.content;
-            document.getElementById('news-form-title').innerText = 'Редактировать новость';
-            document.getElementById('news-submit-btn').innerText = 'Сохранить изменения';
-            document.getElementById('news-cancel-btn').style.display = 'block';
-            window.scrollTo(0, 0);
-        }
-        function cancelEdit() {
-            document.getElementById('edit-news-id').value = ''; document.getElementById('news-title').value = '';
-            document.getElementById('news-content').value = ''; document.getElementById('news-form-title').innerText = 'Добавить новость';
-            document.getElementById('news-submit-btn').innerText = 'Опубликовать'; document.getElementById('news-cancel-btn').style.display = 'none';
-        }
-        async function deleteNews(id) { if(!confirm('Удалить новость?')) return; await fetch('/api/admin/news/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadData(); }
-
-        function renderOrders() {
-            const list = document.getElementById('orders-list');
-            if (!adminData.orders || adminData.orders.length === 0) { list.innerHTML = '<div style="color:#666">Нет заказов</div>'; return; }
-            
-            const recentOrders = [...adminData.orders].reverse().slice(0, 20);
-            let html = '';
-            
-            recentOrders.forEach(o => {
-                const user = adminData.users.find(u => u.id === o.userId);
-                const displayNick = user ? user.name : 'Неизвестный';
-                const isPending = o.status === 'pending';
-                const productName = getItemName(o.itemId); 
-                
-                let btnHtml = isPending ? `<button class="btn-complete" onclick="completeOrder('${o.id}', this)">Выдать</button>` : '';
-                
-                let statusHtml = '';
-                if (o.status === 'pending') statusHtml = `<span style="color:#ffb703">Ожидает выдачи</span>`;
-                else if (o.status === 'delivered') statusHtml = `<span style="color:#00d2ff">Выдан</span>`;
-                else if (o.status === 'completed') statusHtml = `<span style="color:#00ff88">Завершен</span>`;
-                else if (o.status === 'dispute') statusHtml = `<span style="color:#ff4d4d">Спор (Не получен)</span>`;
-                else if (o.status === 'cancelled_by_user') statusHtml = `<span style="color:#888">Отменен игроком (по желанию)</span>`;
-                else if (o.status === 'cancelled_by_dispute') statusHtml = `<span style="color:#ff4d4d">Отменен (Спор не решен)</span>`;
-
-                html += `<div class="order-item" style="${isPending ? '' : 'opacity: 0.8;'} ${o.status === 'dispute' || o.status === 'cancelled_by_dispute' ? 'border-left-color: #ff4d4d;' : ''}">
-                    <div class="order-info"><b>${esc(displayNick)}</b> купил <b>${esc(productName)}</b> (x${o.qty})<br>Ник: <b style="color: #fff;">${esc(o.buyerNick)}</b><br>${statusHtml}</div>${btnHtml}</div>`;
-            });
-            list.innerHTML = html;
-        }
-
-        async function completeOrder(id, btn) {
-            if (!confirm('Выдали товар?')) return; btn.disabled = true; btn.innerText = '...';
-            try {
-                const res = await fetch('/api/admin/complete-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId: id }) });
-                if (res.ok) await loadData(); 
-                else { alert('Ошибка: ' + res.status); btn.disabled = false; btn.innerText = 'Выдать'; }
-            } catch (e) { alert('Ошибка сети: ' + e.message); btn.disabled = false; btn.innerText = 'Выдать'; }
-        }
-
-        function switchChatTab(type) {
-            currentChatType = type;
-            document.getElementById('tab-seller').classList.remove('active'); 
-            document.getElementById('tab-support').classList.remove('active');
-            document.getElementById('tab-global').classList.remove('active');
-            document.getElementById('tab-' + type).classList.add('active');
-            
-            markAdminTabSeen(type);
-            
-            if (type === 'global') {
-                document.getElementById('private-chats-layout').style.display = 'none';
-                document.getElementById('global-chat-layout').style.display = 'flex';
-                renderGlobalAdminChat();
-            } else {
-                document.getElementById('private-chats-layout').style.display = 'grid';
-                document.getElementById('global-chat-layout').style.display = 'none';
-                currentChatUser = null; document.getElementById('chat-messages').innerHTML = '<div style="color: #666; text-align: center; margin-top: 50px;">Выберите пользователя</div>';
-                renderChatUsers();
-            }
-        }
-
-        function renderChatUsers() {
-            const list = document.getElementById('chat-users'); list.innerHTML = '';
-            const usersWithMsgs = [...new Set(adminData.messages.filter(m => m.type === currentChatType).map(m => m.userId))];
-            if (usersWithMsgs.length === 0) { list.innerHTML = '<div style="padding: 15px; color: #666;">Нет сообщений</div>'; return; }
-
-            usersWithMsgs.forEach(userId => {
-                const user = adminData.users.find(u => u.id === userId);
-                if (user) {
-                    const userMsgsCount = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType).length;
-                    const seen = seenAdmin.users[userId + '_' + currentChatType] || 0;
-                    const unread = Math.max(0, userMsgsCount - seen);
-                    
-                    const div = document.createElement('div');
-                    div.className = `user-item ${currentChatUser === userId ? 'active' : ''}`;
-                    div.innerHTML = `<span>${esc(user.name)}</span><span class="user-badge" data-userid="${userId}">${unread}</span>`;
-                    if (unread > 0) div.querySelector('.user-badge').style.display = 'inline-block';
-                    div.onclick = () => openChat(userId);
-                    list.appendChild(div);
-                }
-            });
-        }
-
-        function openChat(userId) {
-            currentChatUser = userId; 
-            // Помечаем как прочитанное
-            const count = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType).length;
-            seenAdmin.users[userId + '_' + currentChatType] = count;
-            saveSeenAdmin();
-            
-            renderChatUsers();
-            const msgBox = document.getElementById('chat-messages'); msgBox.innerHTML = '';
-            const userMsgs = adminData.messages.filter(m => m.userId === userId && m.type === currentChatType);
-            userMsgs.forEach(m => { msgBox.innerHTML += `<div class="msg ${m.sender}">${esc(m.text)}</div>`; });
-            msgBox.scrollTop = msgBox.scrollHeight;
-        }
-
-        async function sendReply() {
-            if (!currentChatUser) return alert('Выберите пользователя!');
-            const input = document.getElementById('admin-reply-input'); const text = input.value.trim(); if (!text) return;
-            try {
-                const res = await fetch('/api/admin/reply', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentChatUser, text: text, type: currentChatType }) });
-                if (!res.ok) { alert('Ошибка отправки: ' + res.status); return; }
-                input.value = ''; loadData(); 
-            } catch (e) { alert('Ошибка сети: ' + e.message); }
-        }
-
-        function renderGlobalAdminChat() {
-            const box = document.getElementById('admin-gc-box');
-            if (!adminData.globalChat) return;
-            
-            const prevCount = box.children.length;
-            const hasNew = adminData.globalChat.length > prevCount;
-            if (!hasNew && prevCount > 0) return; // Ничего не поменялось — не перерисовываем
-            
-            box.innerHTML = '';
-            adminData.globalChat.forEach(m => {
-                let roleClass = '';
-                if (m.role === 'owner') roleClass = 'role-owner';
-                else if (m.role === 'moder') roleClass = 'role-moder';
-                else if (m.role === 'tester') roleClass = 'role-tester';
-
-                box.innerHTML += `
-                    <div class="gc-msg ${roleClass}">
-                        <div>
+                    box.innerHTML += `
+                        <div class="gc-msg ${roleClass} ${animClass}">
                             <div class="gc-header-info">
-                                <span class="gc-name">${esc(m.name)}</span>
+                                <span class="gc-name">${m.name} ${badge}</span>
                                 <span>${m.time}</span>
                             </div>
-                            <div class="gc-text">${esc(m.text)}</div>
+                            <div class="gc-text">${m.text}</div>
                         </div>
-                        <button class="btn-del-msg" onclick="deleteGlobalMessage('${m.id}')" title="Удалить">×</button>
-                    </div>
-                `;
-            });
-            box.scrollTop = box.scrollHeight;
+                    `;
+                });
+                box.scrollTop = box.scrollHeight;
+            }
         }
 
-        async function sendGlobalAdminMsg() {
-            const input = document.getElementById('admin-gc-input');
+        async function sendGlobalMessage() {
+            const input = document.getElementById('gc-input');
             const text = input.value.trim();
             if (!text) return;
+            input.value = '';
             
-            try {
-                const res = await fetch('/api/admin/global-chat/send', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text })
-                });
-                if (!res.ok) { alert('Ошибка отправки: ' + res.status); return; }
-                input.value = '';
-                loadData();
-            } catch (e) { alert('Ошибка сети: ' + e.message); }
-        }
-
-        async function deleteGlobalMessage(msgId) {
-            if(!confirm('Удалить это сообщение?')) return;
-            try {
-                const res = await fetch('/api/admin/global-chat/delete', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ msgId })
-                });
-                if (!res.ok) alert('Ошибка удаления: ' + res.status);
-                loadData();
-            } catch (e) { alert('Ошибка сети: ' + e.message); }
+            const res = await fetch('/api/global-chat', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text })
+            });
+            
+            if (!res.ok) {
+                const data = await res.json();
+                showToast(data.message || 'Ошибка отправки', 'error');
+                input.value = text;
+                return;
+            }
+            
+            // Принудительно перерисовываем, чтобы сразу увидеть своё сообщение
+            await loadGlobalChat(true);
+            markGlobalSeen();
         }
     </script>
 </body>
