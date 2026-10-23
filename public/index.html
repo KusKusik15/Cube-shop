@@ -149,6 +149,17 @@
 
         .chat-link { color: #00d2ff; text-decoration: underline; cursor: pointer; font-weight: bold; }
 
+        /* Команда */
+        .team-item { display: flex; align-items: center; gap: 15px; background: #061225; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--accent); }
+        .team-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--bg-dark); overflow: hidden; }
+        .team-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .team-info { flex-grow: 1; }
+        .team-name { font-weight: 800; color: #fff; }
+        .team-role { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 3px;}
+        .role-tag-owner { background: rgba(255,183,3,0.2); color: #ffb703; }
+        .role-tag-moder { background: rgba(255,77,77,0.2); color: #ff4d4d; }
+        .role-tag-tester { background: rgba(0,210,255,0.2); color: #00d2ff; }
+
         #global-chat-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -206,10 +217,21 @@
             width: 100%;
         }
 
-        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333;}
+        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333; position: relative; group: msg;}
         .gc-header-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; color: #888; gap: 15px;}
         .gc-text { font-size: 15px; color: #ddd; word-break: break-word; line-height: 1.4;}
         
+        .gc-msg.system-msg { align-self: center; background: rgba(255, 77, 77, 0.1); border-color: rgba(255, 77, 77, 0.3); max-width: 95%; text-align: center; font-size: 13px; color: #ff4d4d; }
+        .gc-msg.system-msg .gc-text { color: #ff4d4d; font-size: 13px;}
+
+        .gc-reply-quote { background: rgba(0,0,0,0.3); border-left: 3px solid #888; padding: 5px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 12px; color: #aaa; }
+        .gc-reply-quote b { color: var(--accent); }
+
+        .gc-actions { display: none; gap: 10px; position: absolute; top: -12px; right: 10px; background: #061225; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
+        .gc-msg:hover .gc-actions { display: flex; }
+        .gc-actions button { background: transparent; border: none; cursor: pointer; font-size: 14px; color: #888; padding: 0; }
+        .gc-actions button:hover { color: var(--accent); }
+
         @keyframes gcFirstShow {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
@@ -277,6 +299,11 @@
         }
         .gc-send-btn:hover { background: #fff; box-shadow: 0 0 20px #ffb703; }
         .gc-send-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none;}
+
+        .gc-reply-preview { display: none; background: var(--bg-panel); border: 1px solid rgba(0,210,255,0.3); border-bottom: none; border-radius: 8px 8px 0 0; padding: 10px 15px; font-size: 12px; color: #aaa; max-width: 1000px; margin: 0 auto; justify-content: space-between; align-items: center;}
+        .gc-reply-preview.show { display: flex; }
+        .gc-reply-preview span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%; }
+        .gc-reply-preview button { background: transparent; border: none; color: #ff4d4d; cursor: pointer; font-weight: bold;}
 
         @media (max-width: 900px) {
             .main-container { grid-template-columns: 1fr; }
@@ -462,6 +489,9 @@
         <button class="footer-btn" onclick="openChatModal('support')">
             🆘 Поддержка <span class="notification-badge" id="support-badge">0</span>
         </button>
+        <button class="footer-btn" onclick="openTeamModal()">
+            👥 Команда
+        </button>
     </footer>
 
     <div id="global-chat-screen">
@@ -471,11 +501,26 @@
         </div>
         <div class="gc-ban-banner" id="gc-ban-banner"></div>
         <div class="gc-messages-container" id="gc-box"></div>
+        
+        <div class="gc-reply-preview" id="gc-reply-preview">
+            <span id="gc-reply-text"></span>
+            <button onclick="cancelReply()">✖ Отменить</button>
+        </div>
+        
         <div class="gc-input-area">
             <div class="gc-input-wrapper">
                 <input type="text" id="gc-input" placeholder="Напишите сообщение..." onkeypress="if(event.key === 'Enter') sendGlobalMessage()">
                 <button class="gc-send-btn" id="gc-send-btn" onclick="sendGlobalMessage()">➤</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Модалка команды -->
+    <div class="modal-overlay" id="teamModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('teamModal').style.display = 'none'">×</button>
+            <h3>👥 Команда проекта</h3>
+            <div id="team-list" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
     </div>
 
@@ -570,6 +615,18 @@
         </div>
     </div>
 
+    <!-- Модалка редактирования сообщения -->
+    <div class="modal-overlay" id="editMsgModal">
+        <div class="modal">
+            <button class="close-modal" onclick="document.getElementById('editMsgModal').style.display = 'none'">×</button>
+            <h3>Редактировать сообщение</h3>
+            <div class="form-group">
+                <textarea id="edit-msg-text" class="form-input" rows="3"></textarea>
+            </div>
+            <button class="auth-btn" onclick="saveEditedMsg()">Сохранить</button>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="disputeModal">
         <div class="modal">
             <h3 style="color: #ff4d4d;">Товар не получен?</h3>
@@ -604,6 +661,9 @@
         let globalChatInterval = null;
         let chatCheckInterval = null;
         let lastGlobalId = null;
+        
+        let replyToId = null;
+        let editingMsgId = null;
 
         let seenCounts = { seller: 0, support: 0, global: 0 };
 
@@ -757,6 +817,36 @@
                     else { gcBadge.style.display = 'none'; }
                 }
             } catch(e) {}
+        }
+
+        // --- КОМАНДА ---
+        async function openTeamModal() {
+            document.getElementById('teamModal').style.display = 'flex';
+            const list = document.getElementById('team-list');
+            list.innerHTML = '<div style="color: #888; text-align: center;">Загрузка...</div>';
+            
+            try {
+                const res = await fetch('/api/team');
+                if (res.ok) {
+                    const team = await res.json();
+                    if (team.length === 0) { list.innerHTML = '<div style="color: #888; text-align: center;">В команде пока никого нет.</div>'; return; }
+                    
+                    const roleNames = { owner: 'Владелец', moder: 'Модератор', tester: 'Тестер' };
+                    const roleTags = { owner: 'role-tag-owner', moder: 'role-tag-moder', tester: 'role-tag-tester' };
+                    
+                    list.innerHTML = team.map(u => {
+                        let avatarHtml = u.avatar ? `<img src="${u.avatar}">` : (u.name || '?')[0].toUpperCase();
+                        return `
+                        <div class="team-item">
+                            <div class="team-avatar">${avatarHtml}</div>
+                            <div class="team-info">
+                                <div class="team-name">${u.name}</div>
+                                <div class="team-role ${roleTags[u.role] || ''}">${roleNames[u.role] || u.role}</div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            } catch(e) { list.innerHTML = '<div style="color: red;">Ошибка загрузки</div>'; }
         }
 
         async function loadNews() {
@@ -1114,7 +1204,49 @@
             } catch(e) {}
         }
 
-        // forceReload = true — перерисовать принудительно (после отправки)
+        // --- ОТВЕТЫ И РЕДАКТИРОВАНИЕ ---
+        function replyToMessage(msgId, text, name) {
+            replyToId = msgId;
+            document.getElementById('gc-reply-text').innerHTML = `<b>${name}:</b> ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`;
+            document.getElementById('gc-reply-preview').classList.add('show');
+            document.getElementById('gc-input').focus();
+        }
+
+        function cancelReply() {
+            replyToId = null;
+            document.getElementById('gc-reply-preview').classList.remove('show');
+        }
+
+        function openEditMsgModal(msgId, oldText) {
+            editingMsgId = msgId;
+            document.getElementById('edit-msg-text').value = oldText;
+            document.getElementById('editMsgModal').style.display = 'flex';
+        }
+
+        async function saveEditedMsg() {
+            const text = document.getElementById('edit-msg-text').value.trim();
+            if (!text) return;
+            
+            const res = await fetch('/api/global-chat/edit', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId: editingMsgId, text: text })
+            });
+            
+            document.getElementById('editMsgModal').style.display = 'none';
+            if (res.ok) {
+                loadGlobalChat(true);
+            } else {
+                showToast('Ошибка редактирования', 'error');
+            }
+        }
+
+        function copyMsgText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Текст скопирован', 'success');
+            });
+        }
+
+        // --- ЧАТ (ОТРИСОВКА) ---
         async function loadGlobalChat(forceReload = false) {
             const res = await fetch('/api/global-chat');
             if (res.ok) {
@@ -1135,8 +1267,11 @@
                 msgs.forEach((m, idx) => {
                     let roleClass = 'role-user';
                     let badge = '';
-
-                    if (m.role === 'owner') {
+                    
+                    if (m.role === 'system') {
+                        roleClass = 'system-msg';
+                        badge = '';
+                    } else if (m.role === 'owner') {
                         roleClass = 'role-owner';
                         badge = `<span class="gc-badge owner">ВЛАДЕЛЕЦ</span>`;
                     } else if (m.role === 'moder') {
@@ -1150,15 +1285,48 @@
                     const isNew = isFirstLoad || idx >= prevCount;
                     const animClass = isNew ? 'gc-new' : '';
 
-                    box.innerHTML += `
-                        <div class="gc-msg ${roleClass} ${animClass}">
-                            <div class="gc-header-info">
-                                <span class="gc-name">${m.name} ${badge}</span>
-                                <span>${m.time}</span>
+                    // Цитата (ответ)
+                    let replyHtml = '';
+                    if (m.replyTo) {
+                        const parentMsg = msgs.find(x => x.id === m.replyTo);
+                        if (parentMsg) {
+                            replyHtml = `<div class="gc-reply-quote"><b>${parentMsg.name}:</b> ${parentMsg.text}</div>`;
+                        }
+                    }
+
+                    // Кнопки (редактировать/ответить/копировать)
+                    let actionsHtml = `<div class="gc-actions">`;
+                    if (m.role !== 'system') {
+                        actionsHtml += `<button onclick="copyMsgText('${m.text.replace(/'/g, "\\'")}')" title="Копировать">📋</button>`;
+                        actionsHtml += `<button onclick="replyToMessage('${m.id}', '${m.text.replace(/'/g, "\\'")}', '${m.name}')" title="Ответить">↩️</button>`;
+                        // Редактировать может только автор
+                        if (m.userId === currentUser.id || m.role === 'owner' && currentUser.role === 'owner') {
+                            actionsHtml += `<button onclick="openEditMsgModal('${m.id}', '${m.text.replace(/'/g, "\\'")}')" title="Редактировать">✏️</button>`;
+                        }
+                    }
+                    actionsHtml += `</div>`;
+
+                    let editedMark = m.edited ? `<span style="color:#ffb703; font-size:10px; margin-left:5px;">(Ред. ${m.edited})</span>` : '';
+
+                    if (m.role === 'system') {
+                        box.innerHTML += `
+                            <div class="gc-msg ${roleClass} ${animClass}">
+                                <div class="gc-text" style="text-align:center;">${m.text} ${editedMark}</div>
                             </div>
-                            <div class="gc-text">${m.text}</div>
-                        </div>
-                    `;
+                        `;
+                    } else {
+                        box.innerHTML += `
+                            <div class="gc-msg ${roleClass} ${animClass}">
+                                ${actionsHtml}
+                                ${replyHtml}
+                                <div class="gc-header-info">
+                                    <span class="gc-name">${m.name} ${badge}</span>
+                                    <span>${m.time} ${editedMark}</span>
+                                </div>
+                                <div class="gc-text">${m.text}</div>
+                            </div>
+                        `;
+                    }
                 });
                 box.scrollTop = box.scrollHeight;
             }
@@ -1168,10 +1336,15 @@
             const input = document.getElementById('gc-input');
             const text = input.value.trim();
             if (!text) return;
+            
+            const payload = { text };
+            if (replyToId) payload.replyTo = replyToId;
+            
             input.value = '';
+            cancelReply();
             
             const res = await fetch('/api/global-chat', {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text })
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
             });
             
             if (!res.ok) {
@@ -1181,7 +1354,6 @@
                 return;
             }
             
-            // Принудительно перерисовываем, чтобы сразу увидеть своё сообщение
             await loadGlobalChat(true);
             markGlobalSeen();
         }
