@@ -125,11 +125,11 @@
         .big-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--bg-dark); font-weight: bold; overflow: hidden;}
         .big-avatar img { width: 100%; height: 100%; object-fit: cover;}
 
-        footer { padding: 20px; background: rgba(6, 18, 37, 0.8); border-top: 1px solid rgba(0, 210, 255, 0.1); display: flex; justify-content: center; gap: 20px;}
+        footer { padding: 20px; background: rgba(6, 18, 37, 0.8); border-top: 1px solid rgba(0, 210, 255, 0.1); display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;}
         .footer-btn { background: transparent; border: none; color: var(--text-muted); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; position: relative;}
         .footer-btn:hover { color: var(--accent); }
 
-        .notification-badge { background: #ff4d4d; color: white; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 5px; box-shadow: 0 0 10px rgba(255, 77, 77, 0.5); display: none; }
+        .notification-badge { background: #ff4d4d; color: white; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 10px; margin-left: 5px; box-shadow: 0 0 10px rgba(255, 77, 77, 0.5); display: none; min-width: 18px; text-align: center;}
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: var(--bg-panel); color: white; padding: 15px 20px; border-radius: 8px; border-left: 4px solid var(--accent); box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-size: 14px; font-weight: 600; transform: translateX(120%); transition: 0.3s; opacity: 0; display: flex; align-items: center; gap: 10px; }
@@ -182,6 +182,20 @@
         }
         .gc-back-btn:hover { background: #ffb703; color: #000; }
 
+        /* Баннер мута/бана в общем чате */
+        .gc-ban-banner {
+            background: rgba(255, 77, 77, 0.15);
+            border-bottom: 1px solid #ff4d4d;
+            color: #ff4d4d;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+        }
+        .gc-ban-banner.show { display: block; }
+        .gc-ban-banner b { color: #fff; }
+
         .gc-messages-container {
             flex-grow: 1;
             overflow-y: auto;
@@ -194,40 +208,32 @@
             width: 100%;
         }
 
-        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333; animation: gcFadeIn 0.35s ease-out;}
+        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333;}
         .gc-header-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; color: #888; gap: 15px;}
         .gc-text { font-size: 15px; color: #ddd; word-break: break-word; line-height: 1.4;}
         
-        /* Анимация появления сообщений */
-        @keyframes gcFadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+        /* Анимация появления ТОЛЬКО при первом появлении (без мигания) */
+        @keyframes gcFirstShow {
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .gc-msg.gc-new { animation: gcFirstShow 0.35s ease-out; }
 
-        /* Анимация пульсирующего золотого свечения для владельца */
+        /* Пульсация свечения для владельца (не дёргает раскладку) */
         @keyframes ownerGlow {
-            0%, 100% { 
-                box-shadow: 0 0 8px rgba(255, 183, 3, 0.3), 0 0 15px rgba(255, 183, 3, 0.15);
-                border-color: rgba(255, 183, 3, 0.6);
-            }
-            50% { 
-                box-shadow: 0 0 15px rgba(255, 183, 3, 0.7), 0 0 30px rgba(255, 183, 3, 0.4);
-                border-color: rgba(255, 183, 3, 1);
-            }
+            0%, 100% { box-shadow: 0 0 8px rgba(255, 183, 3, 0.3), 0 0 15px rgba(255, 183, 3, 0.15); border-color: rgba(255, 183, 3, 0.6); }
+            50% { box-shadow: 0 0 15px rgba(255, 183, 3, 0.7), 0 0 30px rgba(255, 183, 3, 0.4); border-color: rgba(255, 183, 3, 1); }
         }
 
-        /* Владелец — с анимацией */
         .role-owner { 
             border: 1px solid #ffb703; 
             background: linear-gradient(90deg, rgba(255,183,3,0.12) 0%, rgba(15,36,66,1) 100%); 
-            animation: gcFadeIn 0.35s ease-out, ownerGlow 2.5s ease-in-out infinite;
+            animation: ownerGlow 2.5s ease-in-out infinite;
         }
         .role-owner .gc-name { color: #ffb703; font-weight: 800; text-shadow: 0 0 8px rgba(255,183,3,0.7); }
         
-        /* Модер */
         .role-moder { border: 1px solid #ff4d4d; }
         .role-moder .gc-name { color: #ff4d4d; font-weight: 800; }
-        /* Тестер */
         .role-tester { border: 1px solid #00d2ff; }
         .role-tester .gc-name { color: #00d2ff; font-weight: 800; }
 
@@ -260,6 +266,7 @@
             outline: none;
         }
         .gc-input-wrapper input:focus { border-color: #ffb703; box-shadow: 0 0 15px rgba(255,183,3,0.2); }
+        .gc-input-wrapper input:disabled { background: #333; color: #888; cursor: not-allowed; border-color: #444;}
         
         .gc-send-btn {
             background: #ffb703;
@@ -273,6 +280,7 @@
             transition: 0.3s;
         }
         .gc-send-btn:hover { background: #fff; box-shadow: 0 0 20px #ffb703; }
+        .gc-send-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none;}
 
         @media (max-width: 900px) {
             .main-container { grid-template-columns: 1fr; }
@@ -306,6 +314,8 @@
             .gc-msg { max-width: 95%; padding: 10px; }
             .gc-input-area { padding: 10px; }
             .gc-input-wrapper input { padding: 12px; }
+            footer { gap: 10px; padding: 15px 10px; }
+            .footer-btn { font-size: 13px; }
         }
     </style>
 </head>
@@ -447,9 +457,15 @@
         <button class="footer-btn" onclick="openOrdersModal()">
             📦 Мои заказы <span class="notification-badge" id="notif-badge">0</span>
         </button>
-        <button class="footer-btn" onclick="openGlobalChat()">💬 Общий чат</button>
-        <button class="footer-btn" onclick="openChatModal('seller')">✉️ Продавец</button>
-        <button class="footer-btn" onclick="openChatModal('support')">🆘 Поддержка</button>
+        <button class="footer-btn" onclick="openGlobalChat()">
+            💬 Общий чат <span class="notification-badge" id="gc-badge">0</span>
+        </button>
+        <button class="footer-btn" onclick="openChatModal('seller')">
+            ✉️ Продавец <span class="notification-badge" id="seller-badge">0</span>
+        </button>
+        <button class="footer-btn" onclick="openChatModal('support')">
+            🆘 Поддержка <span class="notification-badge" id="support-badge">0</span>
+        </button>
     </footer>
 
     <div id="global-chat-screen">
@@ -457,11 +473,12 @@
             <div class="gc-title">🗣️ Общий чат</div>
             <button class="gc-back-btn" onclick="closeGlobalChat()">← Назад в магазин</button>
         </div>
+        <div class="gc-ban-banner" id="gc-ban-banner"></div>
         <div class="gc-messages-container" id="gc-box"></div>
         <div class="gc-input-area">
             <div class="gc-input-wrapper">
                 <input type="text" id="gc-input" placeholder="Напишите сообщение..." onkeypress="if(event.key === 'Enter') sendGlobalMessage()">
-                <button class="gc-send-btn" onclick="sendGlobalMessage()">➤</button>
+                <button class="gc-send-btn" id="gc-send-btn" onclick="sendGlobalMessage()">➤</button>
             </div>
         </div>
     </div>
@@ -589,6 +606,20 @@
         let reviewingOrderId = null;
         let notificationInterval = null;
         let globalChatInterval = null;
+        let chatCheckInterval = null;
+
+        // Для кружочков: запоминаем, что уже видели
+        let seenCounts = { seller: 0, support: 0, global: 0 };
+
+        function loadSeenCounts() {
+            try {
+                const stored = JSON.parse(localStorage.getItem('cubeShopSeen') || '{}');
+                seenCounts = { seller: stored.seller || 0, support: stored.support || 0, global: stored.global || 0 };
+            } catch(e) {}
+        }
+        function saveSeenCounts() {
+            try { localStorage.setItem('cubeShopSeen', JSON.stringify(seenCounts)); } catch(e) {}
+        }
 
         function switchAuthTab(tab) {
             document.getElementById('tab-login').style.color = tab === 'login' ? 'var(--accent)' : 'var(--text-muted)';
@@ -639,6 +670,7 @@
         }
 
         window.onload = async () => {
+            loadSeenCounts();
             try {
                 const res = await fetch('/api/user');
                 if (res.ok) { currentUser = await res.json(); showShop(); } 
@@ -677,9 +709,13 @@
             loadPublicReviews();
             loadNews();
             checkNotifications();
+            checkChatBadges();
             
             if(notificationInterval) clearInterval(notificationInterval);
             notificationInterval = setInterval(checkNotifications, 30000);
+
+            if(chatCheckInterval) clearInterval(chatCheckInterval);
+            chatCheckInterval = setInterval(checkChatBadges, 10000);
         }
 
         async function checkNotifications() {
@@ -691,6 +727,41 @@
                     const badge = document.getElementById('notif-badge');
                     if (activeOrders.length > 0) { badge.innerText = activeOrders.length; badge.style.display = 'inline-block'; } 
                     else { badge.style.display = 'none'; }
+                }
+            } catch(e) {}
+        }
+
+        // Проверка кружочков у чатов
+        async function checkChatBadges() {
+            try {
+                // Личные чаты — считаем непрочитанные от админа
+                const chatRes = await fetch('/api/chat');
+                if (chatRes.ok) {
+                    const msgs = await chatRes.json();
+                    const sellerMsgs = msgs.filter(m => m.type === 'seller').length;
+                    const supportMsgs = msgs.filter(m => m.type === 'support').length;
+                    
+                    const sellerUnread = Math.max(0, sellerMsgs - seenCounts.seller);
+                    const supportUnread = Math.max(0, supportMsgs - seenCounts.support);
+                    
+                    const sellerBadge = document.getElementById('seller-badge');
+                    const supportBadge = document.getElementById('support-badge');
+                    
+                    if (sellerUnread > 0) { sellerBadge.innerText = sellerUnread; sellerBadge.style.display = 'inline-block'; }
+                    else { sellerBadge.style.display = 'none'; }
+                    
+                    if (supportUnread > 0) { supportBadge.innerText = supportUnread; supportBadge.style.display = 'inline-block'; }
+                    else { supportBadge.style.display = 'none'; }
+                }
+
+                // Общий чат
+                const gcRes = await fetch('/api/global-chat');
+                if (gcRes.ok) {
+                    const gcMsgs = await gcRes.json();
+                    const gcUnread = Math.max(0, gcMsgs.length - seenCounts.global);
+                    const gcBadge = document.getElementById('gc-badge');
+                    if (gcUnread > 0) { gcBadge.innerText = gcUnread; gcBadge.style.display = 'inline-block'; }
+                    else { gcBadge.style.display = 'none'; }
                 }
             } catch(e) {}
         }
@@ -957,10 +1028,32 @@
             currentChatMode = mode;
             document.getElementById('chat-title').innerText = mode === 'seller' ? '💬 Чат с продавцом' : '🆘 Поддержка';
             document.getElementById('chatModal').style.display = 'flex'; loadChat();
+            // Помечаем, что прочитали
+            markChatSeen(mode);
         }
+
+        async function markChatSeen(mode) {
+            try {
+                const res = await fetch('/api/chat');
+                if (res.ok) {
+                    const msgs = await res.json();
+                    const count = msgs.filter(m => m.type === mode).length;
+                    seenCounts[mode] = count;
+                    saveSeenCounts();
+                    checkChatBadges();
+                }
+            } catch(e) {}
+        }
+
         async function loadChat() {
             const res = await fetch('/api/chat');
-            if (res.ok) { const msgs = await res.json(); const box = document.getElementById('chat-box'); box.innerHTML = ''; msgs.filter(m => m.type === currentChatMode).forEach(m => { box.innerHTML += `<div class="msg ${m.sender}">${m.text}</div>`; }); box.scrollTop = box.scrollHeight; }
+            if (res.ok) { 
+                const msgs = await res.json(); 
+                const box = document.getElementById('chat-box'); 
+                box.innerHTML = ''; 
+                msgs.filter(m => m.type === currentChatMode).forEach(m => { box.innerHTML += `<div class="msg ${m.sender}">${m.text}</div>`; }); 
+                box.scrollTop = box.scrollHeight; 
+            }
         }
         async function sendMessage() {
             const input = document.getElementById('chat-input'); const text = input.value.trim(); if (!text) return; input.value = '';
@@ -975,6 +1068,9 @@
             if(globalChatInterval) clearInterval(globalChatInterval);
             globalChatInterval = setInterval(loadGlobalChat, 3000);
             if (window.innerWidth < 800) toggleSidebar();
+            // Помечаем, что прочитали
+            markGlobalSeen();
+            updateMuteBanner();
         }
 
         function closeGlobalChat() {
@@ -983,14 +1079,67 @@
             if(globalChatInterval) clearInterval(globalChatInterval);
         }
 
+        async function markGlobalSeen() {
+            try {
+                const res = await fetch('/api/global-chat');
+                if (res.ok) {
+                    const msgs = await res.json();
+                    seenCounts.global = msgs.length;
+                    saveSeenCounts();
+                    checkChatBadges();
+                }
+            } catch(e) {}
+        }
+
+        // Баннер мута в общем чате
+        async function updateMuteBanner() {
+            const banner = document.getElementById('gc-ban-banner');
+            const input = document.getElementById('gc-input');
+            const sendBtn = document.getElementById('gc-send-btn');
+            
+            try {
+                const res = await fetch('/api/user');
+                if (!res.ok) return;
+                const u = await res.json();
+                
+                if (u.isBanned) {
+                    banner.classList.add('show');
+                    banner.innerHTML = `<b>🚫 Вы забанены в чате.</b>${u.banReason ? ' Причина: <b>' + u.banReason + '</b>' : ''}`;
+                    input.disabled = true;
+                    sendBtn.disabled = true;
+                    input.placeholder = 'Вы забанены в чате';
+                } else if (u.mutedUntil && new Date(u.mutedUntil).getTime() > Date.now()) {
+                    const until = new Date(u.mutedUntil).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+                    banner.classList.add('show');
+                    banner.innerHTML = `<b>🔇 Вы в муте до ${until}.</b>${u.muteReason ? ' Причина: <b>' + u.muteReason + '</b>' : ''}`;
+                    input.disabled = true;
+                    sendBtn.disabled = true;
+                    input.placeholder = 'Вы в муте';
+                } else {
+                    banner.classList.remove('show');
+                    input.disabled = false;
+                    sendBtn.disabled = false;
+                    input.placeholder = 'Напишите сообщение...';
+                }
+            } catch(e) {}
+        }
+
         async function loadGlobalChat() {
             const res = await fetch('/api/global-chat');
             if (res.ok) {
                 const msgs = await res.json();
                 const box = document.getElementById('gc-box');
+                
+                // Проверяем, есть ли новые сообщения — чтобы не мигало
+                const prevCount = box.children.length;
+                const isFirstLoad = prevCount === 0;
+                const hasNew = msgs.length > prevCount;
+                
+                if (!hasNew && !isFirstLoad) return; // Ничего не поменялось — не перерисовываем
+                
                 box.innerHTML = '';
                 
-                msgs.forEach(m => {
+                msgs.forEach((m, idx) => {
                     let roleClass = 'role-user';
                     let badge = '';
 
@@ -1005,8 +1154,12 @@
                         badge = `<span class="gc-badge tester">ТЕСТЕР</span>`;
                     }
 
+                    // Анимацию появления — только у новых (последних) сообщений
+                    const isNew = isFirstLoad || idx >= prevCount;
+                    const animClass = isNew ? 'gc-new' : '';
+
                     box.innerHTML += `
-                        <div class="gc-msg ${roleClass}">
+                        <div class="gc-msg ${roleClass} ${animClass}">
                             <div class="gc-header-info">
                                 <span class="gc-name">${m.name} ${badge}</span>
                                 <span>${m.time}</span>
@@ -1025,9 +1178,17 @@
             if (!text) return;
             input.value = '';
             
-            await fetch('/api/global-chat', {
+            const res = await fetch('/api/global-chat', {
                 method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text })
             });
+            
+            if (!res.ok) {
+                const data = await res.json();
+                showToast(data.message || 'Ошибка отправки', 'error');
+                input.value = text;
+                return;
+            }
+            
             loadGlobalChat();
         }
     </script>
