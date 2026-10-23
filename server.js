@@ -6,8 +6,21 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const webpush = require('web-push');
+// [ФИКС 1] crypto добавлен (пригодится для randomUUID в следующей итерации)
+const crypto = require('crypto');
 
 const app = express();
+
+// Функция для получения московского времени (строка)
+function getMoscowTime() {
+    const now = new Date();
+    // Сдвигаем время на UTC+3
+    const mskTime = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60000));
+    return mskTime.toLocaleString('ru-RU', { 
+        day: '2-digit', month: '2-digit', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
+    });
+}
 
 app.use(session({ secret: 'cube_shop_secret', resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
@@ -21,7 +34,6 @@ try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, private
 
 const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
 
-// ДОБАВЛЕНО: массив globalChat для общего чата
 let db = { 
     users: [], 
     inventory: { damass: 10, copper: 5, cobble: 10 }, 
@@ -46,7 +58,7 @@ if (fs.existsSync(DB_FILE)) {
         if (!db.messages) db.messages = [];
         if (!db.reviews) db.reviews = [];
         if (!db.news) db.news = [];
-        if (!db.globalChat) db.globalChat = []; // Проверка на чат
+        if (!db.globalChat) db.globalChat = []; 
         if (!db.inventory) db.inventory = { damass: 10, copper: 5, cobble: 10 };
         if (!db.prices) db.prices = { damass: 30, copper: 12, cobble: 15, sword: 50, axe: 45, pickaxe: 40, fishing_rod: 20 };
     } catch (e) {} 
@@ -62,7 +74,7 @@ passport.use(new YandexStrategy({
   },
   function(accessToken, refreshToken, profile, done) {
     let user = db.users.find(u => u.yandexId === profile.id);
-    if (!user) { user = { id: Date.now().toString(), yandexId: profile.id, name: profile.displayName, gameNick: null, avatar: null, role: 'user' }; db.users.push(user); saveDB(); }
+    if (!user) { user = { id: Date.now().toString(), yandexId: profile.id, name: profile.displayName, gameNick: null, avatar: null, role: 'user', mutedUntil: null, isBanned: false }; db.users.push(user); saveDB(); }
     return done(null, user);
   }
 ));
@@ -74,48 +86,129 @@ app.get('/api/user', (req, res) => {
     else res.status(401).json({ error: 'Not logged in' });
 });
 
-// ОБЩИЙ ЧАТ (API)
+// --- ОБЩИЙ ЧАТ ---
 app.get('/api/global-chat', (req, res) => {
-    // Отдаем последние 50 сообщений
     res.json(db.globalChat.slice(-50));
 });
 
 app.post('/api/global-chat', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
+    
+    const user = db.users.find(u => u.id === req.user.id);
+    
+    // Проверка на бан
+    if (user.isBanned) return res.status(403).json({ message: 'Вы забанены в чате.' });
+    
+    // Проверка на мут
+    if (user.mutedUntil) {
+        const now = new Date().getTime();
+        if (now < user.mutedUntil) {
+            const remainingMinutes = Math.ceil((user.mutedUntil - now) / 60000);
+            return res.status(403).json({ message: `У вас мут еще на ${remainingMinutes} мин.` });
+        } else {
+            user.mutedUntil = null; // Мут прошел
+            saveDB();
+        }
+    }
+
     const { text } = req.body;
     if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
 
-    const user = db.users.find(u => u.id === req.user.id);
-    
     const newMsg = {
         id: Date.now().toString(),
         userId: req.user.id,
         name: user.gameNick || user.name,
-        role: user.role || 'user', // Владелец, модер, тестер или юзер
+        role: user.role || 'user',
         text: text,
-        time: new Date().toLocaleTimeString()
+        time: getMoscowTime()
     };
     
     db.globalChat.push(newMsg);
-    if (db.globalChat.length > 100) db.globalChat.shift(); // Храним только 100 последних
+    if (db.globalChat.length > 100) db.globalChat.shift();
     saveDB();
     res.json({ success: true });
 });
 
-// Выдача ролей (Админ)
-app.post('/api/admin/set-role', (req, res) => {
+// Отправка сообщения от АДМИНА (Владельца)
+app.post('/api/admin/global-chat/send', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
-    const { userId, role } = req.body;
-    const user = db.users.find(u => u.id === userId);
-    if (user) {
-        user.role = role;
-        saveDB();
-        res.json({ success: true });
-    } else { res.status(404).json({ message: 'Юзер не найден' }); }
+    
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ message: 'Пустое сообщение' });
+
+    const newMsg = {
+        id: Date.now().toString(),
+        userId: 'owner',
+        name: 'KusKusik15',
+        role: 'owner',
+        text: text,
+        time: getMoscowTime()
+    };
+    
+    db.globalChat.push(newMsg);
+    if (db.globalChat.length > 100) db.globalChat.shift();
+    saveDB();
+    res.json({ success: true });
 });
 
-// ... (Остальные маршруты: заказы, новости, профиль - оставляем как были) ...
+// Удаление сообщения (Админ)
+app.post('/api/admin/global-chat/delete', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    db.globalChat = db.globalChat.filter(m => m.id !== req.body.msgId);
+    saveDB();
+    res.json({ success: true });
+});
 
+// Мут и Бан (Админ)
+app.post('/api/admin/chat-action', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
+    const { userId, action, minutes } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    
+    if (!user) return res.status(404).json({ message: 'Юзер не найден' });
+
+    if (action === 'mute') {
+        user.mutedUntil = new Date().getTime() + (minutes * 60000);
+    } else if (action === 'ban') {
+        user.isBanned = true;
+    } else if (action === 'unban') {
+        user.isBanned = false;
+        user.mutedUntil = null;
+    }
+    
+    saveDB();
+    res.json({ success: true });
+});
+
+// --- НОВОСТИ ---
+app.get('/api/news', (req, res) => { res.json([...db.news].sort((a,b) => (b.pinned?1:0) - (a.pinned?1:0))); });
+
+app.post('/api/admin/news', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({});
+    const { title, content } = req.body;
+    db.news.unshift({ id: Date.now().toString(), title, content, date: getMoscowTime(), edited: null, pinned: false }); 
+    saveDB(); res.json({ success: true });
+});
+
+app.post('/api/admin/news/edit', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({});
+    const { id, title, content } = req.body; const newsItem = db.news.find(n => n.id === id);
+    if (newsItem) {
+        newsItem.title = title; newsItem.content = content;
+        newsItem.edited = getMoscowTime();
+        saveDB(); res.json({ success: true });
+    } else { res.status(404).json({}); }
+});
+
+app.post('/api/admin/news/pin', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({});
+    const { id } = req.body; const newsItem = db.news.find(n => n.id === id);
+    if (newsItem) { if (!newsItem.pinned) { db.news.forEach(n => n.pinned = false); newsItem.pinned = true; } else { newsItem.pinned = false; } saveDB(); res.json({ success: true }); }
+});
+
+app.post('/api/admin/news/delete', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); db.news = db.news.filter(n => n.id !== req.body.id); saveDB(); res.json({ success: true }); });
+
+// --- ПРОФИЛЬ ---
 app.post('/api/profile/update', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { gameNick, avatar } = req.body;
@@ -137,6 +230,7 @@ app.post('/api/profile/password', async (req, res) => {
     saveDB(); res.json({ message: 'Пароль изменен' });
 });
 
+// --- ЗАКАЗЫ И ЧАТЫ ---
 app.get('/api/orders', (req, res) => { if (!req.user) return res.status(401).json({}); res.json(db.orders.filter(o => o.userId === req.user.id)); });
 
 app.get('/api/reviews/all', (req, res) => {
@@ -154,38 +248,9 @@ app.post('/api/reviews/add', (req, res) => {
     const { orderId, rating, text } = req.body;
     const order = db.orders.find(o => o.id === orderId && o.userId === req.user.id);
     if (!order) return res.status(404).json({ message: 'Заказ не найден' });
-    db.reviews.push({ id: Date.now().toString(), userId: req.user.id, itemId: order.itemId, rating, text, date: new Date().toLocaleDateString() });
+    db.reviews.push({ id: Date.now().toString(), userId: req.user.id, itemId: order.itemId, rating, text, date: getMoscowTime() });
     order.reviewed = true; saveDB(); res.json({ success: true });
 });
-
-app.get('/api/news', (req, res) => { res.json([...db.news].sort((a,b) => (b.pinned?1:0) - (a.pinned?1:0))); });
-
-app.post('/api/admin/news', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const { title, content } = req.body;
-    const mskTime = new Date(new Date().getTime() + 3*60*60000);
-    const dateStr = mskTime.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    db.news.unshift({ id: Date.now().toString(), title, content, date: dateStr, edited: null, pinned: false }); saveDB(); res.json({ success: true });
-});
-
-app.post('/api/admin/news/edit', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const { id, title, content } = req.body; const newsItem = db.news.find(n => n.id === id);
-    if (newsItem) {
-        newsItem.title = title; newsItem.content = content;
-        const mskTime = new Date(new Date().getTime() + 3*60*60000);
-        newsItem.edited = mskTime.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        saveDB(); res.json({ success: true });
-    } else { res.status(404).json({}); }
-});
-
-app.post('/api/admin/news/pin', (req, res) => {
-    if (!req.session.isAdmin) return res.status(401).json({});
-    const { id } = req.body; const newsItem = db.news.find(n => n.id === id);
-    if (newsItem) { if (!newsItem.pinned) { db.news.forEach(n => n.pinned = false); newsItem.pinned = true; } else { newsItem.pinned = false; } saveDB(); res.json({ success: true }); }
-});
-
-app.post('/api/admin/news/delete', (req, res) => { if (!req.session.isAdmin) return res.status(401).json({}); db.news = db.news.filter(n => n.id !== req.body.id); saveDB(); res.json({ success: true }); });
 
 app.post('/api/order/confirm-receipt', (req, res) => {
     if (!req.user) return res.status(401).json({});
@@ -206,7 +271,7 @@ app.post('/api/order/cancel', (req, res) => {
         if (order.status === 'pending' || order.status === 'delivered') order.status = 'cancelled_by_user';
         else if (order.status === 'dispute') order.status = 'cancelled_by_dispute';
         else return res.status(400).json({});
-        order.cancelDate = new Date().toLocaleString();
+        order.cancelDate = getMoscowTime();
         db.inventory[order.itemId] = (db.inventory[order.itemId] || 0) + order.qty;
         saveDB(); res.json({ success: true });
     } else { res.status(400).json({}); }
@@ -217,9 +282,9 @@ app.get('/api/chat', (req, res) => { if (!req.user) return res.status(401).json(
 app.post('/api/chat', (req, res) => {
     if (!req.user) return res.status(401).json({});
     const { text, type } = req.body;
-    db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: type, text: text, time: new Date().toLocaleTimeString() });
+    db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'user', type: type, text: text, time: getMoscowTime() });
     saveDB();
-    setTimeout(() => { db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'admin', type: type, text: 'Сообщение получено. Админ ответит позже (или в TG @Kusik155).', time: new Date().toLocaleTimeString() }); saveDB(); }, 1000);
+    setTimeout(() => { db.messages.push({ id: Date.now().toString(), userId: req.user.id, sender: 'admin', type: type, text: 'Сообщение получено. Админ ответит позже (или в TG @Kusik155).', time: getMoscowTime() }); saveDB(); }, 1000);
     res.json({ success: true });
 });
 
@@ -229,7 +294,7 @@ app.post('/api/register', async (req, res) => {
     const { login, password, gameNick } = req.body;
     if (db.users.find(u => u.name === login)) return res.status(400).json({ message: 'Логин занят!' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick: gameNick, avatar: null, role: 'user' };
+    const newUser = { id: Date.now().toString(), name: login, password: hashedPassword, gameNick: gameNick, avatar: null, role: 'user', mutedUntil: null, isBanned: false };
     db.users.push(newUser); saveDB();
     req.login(newUser, (err) => { if (err) return res.status(500).json({}); res.json({ message: 'Успешно!' }); });
 });
@@ -249,15 +314,18 @@ app.post('/api/order', (req, res) => {
     if (!db.inventory[itemId] || db.inventory[itemId] < qty) return res.status(400).json({ message: 'Нет в наличии!' });
     const currentPrice = (db.prices && db.prices[itemId]) ? parseInt(db.prices[itemId]) : 0;
     db.inventory[itemId] -= qty;
-    db.orders.push({ id: Date.now().toString(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, price: currentPrice, status: 'pending', reviewed: false, date: new Date().toLocaleString() });
+    db.orders.push({ id: Date.now().toString(), userId: req.user.id, buyerNick: gameNick, itemId, qty, currency, price: currentPrice, status: 'pending', reviewed: false, date: getMoscowTime() });
     saveDB(); res.json({ message: `Заказ создан!` });
 });
 
 app.get('/auth/yandex', passport.authenticate('yandex'));
 app.get('/auth/yandex/callback', passport.authenticate('yandex', { failureRedirect: '/' }), (req, res) => res.redirect('/'));
-app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); res.redirect('/'); }); });
+// [ФИКС 4] При логауте чистим флаг админа
+app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); req.session.isAdmin = false; res.redirect('/'); }); });
 
-const ADMIN_PASSWORD = 'admin';
+// --- АДМИНКА ---
+// [ФИКС 2] Пароль можно переопределить через env (по умолчанию 'admin')
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.post('/api/admin/login', (req, res) => { if (req.body.password === ADMIN_PASSWORD) { req.session.isAdmin = true; res.json({ success: true }); } else { res.status(401).json({}); } });
 app.get('/api/admin/check', (req, res) => { res.json({ isAdmin: req.session.isAdmin === true }); });
@@ -265,8 +333,14 @@ app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.j
 
 app.get('/api/admin/data', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
-    const safeUsers = db.users.map(u => ({ id: u.id, name: u.gameNick || u.name, role: u.role || 'user' }));
-    res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news });
+    const safeUsers = db.users.map(u => ({ 
+        id: u.id, 
+        name: u.gameNick || u.name, 
+        role: u.role || 'user',
+        isBanned: u.isBanned || false,
+        isMuted: u.mutedUntil && (new Date().getTime() < u.mutedUntil)
+    }));
+    res.json({ users: safeUsers, orders: db.orders, messages: db.messages, inventory: db.inventory, prices: db.prices, reviews: db.reviews, news: db.news, globalChat: db.globalChat });
 });
 
 app.post('/api/admin/inventory', (req, res) => {
@@ -275,6 +349,30 @@ app.post('/api/admin/inventory', (req, res) => {
     for (let key in req.body.inventory) newInv[key] = parseInt(req.body.inventory[key]) || 0;
     for (let key in req.body.prices) newPrices[key] = parseInt(req.body.prices[key]) || 0;
     db.inventory = newInv; db.prices = newPrices; saveDB(); res.json({ success: true });
+});
+
+// [ФИКС 3] НОВЫЙ эндпоинт: смена роли юзера из админки
+app.post('/api/admin/set-role', (req, res) => {
+    if (!req.session.isAdmin) return res.status(401).json({});
+    const { userId, role } = req.body;
+    const allowedRoles = ['user', 'tester', 'moder', 'owner'];
+    if (!allowedRoles.includes(role)) {
+        return res.status(400).json({ message: 'Неверная роль' });
+    }
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(404).json({ message: 'Юзер не найден' });
+
+    // [ЗАЩИТА] Нельзя снять роль с последнего владельца
+    if (user.role === 'owner' && role !== 'owner') {
+        const ownersCount = db.users.filter(u => u.role === 'owner').length;
+        if (ownersCount <= 1) {
+            return res.status(400).json({ message: 'Нельзя снять роль с последнего владельца' });
+        }
+    }
+
+    user.role = role;
+    saveDB();
+    res.json({ success: true });
 });
 
 app.post('/api/admin/complete-order', (req, res) => {
@@ -286,7 +384,7 @@ app.post('/api/admin/complete-order', (req, res) => {
 app.post('/api/admin/reply', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({});
     const { userId, text, type } = req.body;
-    db.messages.push({ id: Date.now().toString(), userId: userId, sender: 'admin', type: type, text: text, time: new Date().toLocaleTimeString() });
+    db.messages.push({ id: Date.now().toString(), userId: userId, sender: 'admin', type: type, text: text, time: getMoscowTime() });
     saveDB(); res.json({ success: true });
 });
 
