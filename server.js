@@ -22,21 +22,17 @@ function getMoscowTime() {
     });
 }
 
-// Функция для проверки, можно ли редактировать (1 час)
 function canEdit(timeStr) {
     if (!timeStr) return false;
     try {
-        // Парсим строку вида "25.10.2026, 18:30"
         const parts = timeStr.split(', ');
         const dateParts = parts[0].split('.');
         const timeParts = parts[1].split(':');
-        // Создаем объект даты (месяц минус 1)
         const msgDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
         const now = new Date();
-        // Разница в миллисекундах -> в часы
         const diffHours = (now - msgDate) / (1000 * 60 * 60);
-        return diffHours <= 1; // Можно редактировать, если прошло <= 1 часа
-    } catch(e) { return true; } // Если ошибка парсинга, разрешаем на всякий случай
+        return diffHours <= 1; 
+    } catch(e) { return true; }
 }
 
 app.use(session({ secret: 'cube_shop_secret', resave: false, saveUninitialized: true }));
@@ -52,14 +48,9 @@ try { webpush.setVapidDetails('mailto:test@example.com', publicVapidKey, private
 const DB_FILE = process.env.NETRUN ? '/data/db.json' : path.join(__dirname, 'db.json');
 
 let db = { 
-    users: [], 
-    inventory: { damass: 10, copper: 5, cobble: 10 }, 
+    users: [], inventory: { damass: 10, copper: 5, cobble: 10 }, 
     prices: { damass: 30, copper: 12, cobble: 15, sword: 50, axe: 45, pickaxe: 40, fishing_rod: 20 }, 
-    orders: [], 
-    messages: [], 
-    reviews: [], 
-    news: [],
-    globalChat: [] 
+    orders: [], messages: [], reviews: [], news: [], globalChat: [] 
 };
 
 if (process.env.NETRUN) {
@@ -147,7 +138,6 @@ app.post('/api/global-chat', (req, res) => {
     res.json({ success: true });
 });
 
-// Редактирование своего сообщения (лимит 1 час)
 app.post('/api/global-chat/edit', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { msgId, text } = req.body;
@@ -163,7 +153,6 @@ app.post('/api/global-chat/edit', (req, res) => {
     res.json({ success: true });
 });
 
-// Удаление своего сообщения
 app.post('/api/global-chat/delete', (req, res) => {
     if (!req.user) return res.status(401).json({ message: 'Нет доступа' });
     const { msgId } = req.body;
@@ -177,7 +166,6 @@ app.post('/api/global-chat/delete', (req, res) => {
     res.json({ success: true });
 });
 
-// Отправка сообщения от АДМИНА (Владельца)
 app.post('/api/admin/global-chat/send', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { text, replyTo } = req.body;
@@ -192,7 +180,6 @@ app.post('/api/admin/global-chat/send', (req, res) => {
     res.json({ success: true });
 });
 
-// Редактирование сообщения админом
 app.post('/api/admin/global-chat/edit', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { msgId, text } = req.body;
@@ -205,7 +192,6 @@ app.post('/api/admin/global-chat/edit', (req, res) => {
     res.json({ success: true });
 });
 
-// Удаление сообщения админом
 app.post('/api/admin/global-chat/delete', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     db.globalChat = db.globalChat.filter(m => m.id !== req.body.msgId);
@@ -213,7 +199,6 @@ app.post('/api/admin/global-chat/delete', (req, res) => {
     res.json({ success: true });
 });
 
-// Мут и Бан (Админ)
 app.post('/api/admin/chat-action', (req, res) => {
     if (!req.session.isAdmin) return res.status(401).json({ message: 'Доступ запрещен' });
     const { userId, action, minutes, reason } = req.body;
@@ -388,7 +373,27 @@ app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return n
 // --- АДМИНКА ---
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
-app.post('/api/admin/login', (req, res) => { if (req.body.password === ADMIN_PASSWORD) { req.session.isAdmin = true; res.json({ success: true }); } else { res.status(401).json({}); } });
+
+app.post('/api/admin/login', (req, res) => { 
+    if (req.body.password === ADMIN_PASSWORD) { 
+        req.session.isAdmin = true; 
+        
+        // АВТО-ВЫДАЧА РОЛИ ВЛАДЕЛЬЦА
+        // Если это админ и он залогинен как юзер, делаем его владельцем
+        if (req.user) {
+            const user = db.users.find(u => u.id === req.user.id);
+            if (user && user.role !== 'owner') {
+                user.role = 'owner';
+                saveDB();
+            }
+        }
+        
+        res.json({ success: true }); 
+    } else { 
+        res.status(401).json({}); 
+    } 
+});
+
 app.get('/api/admin/check', (req, res) => { res.json({ isAdmin: req.session.isAdmin === true }); });
 app.post('/api/admin/logout', (req, res) => { req.session.isAdmin = false; res.json({ success: true }); });
 
