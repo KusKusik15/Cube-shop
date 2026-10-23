@@ -179,8 +179,9 @@
         }
         
         .gc-title { font-size: 20px; font-weight: 800; color: #ffb703; display: flex; align-items: center; gap: 10px;}
+        .gc-header-btns { display: flex; gap: 10px; }
         
-        .gc-back-btn {
+        .gc-back-btn, .gc-team-btn {
             background: transparent;
             border: 1px solid #ffb703;
             color: #ffb703;
@@ -189,8 +190,11 @@
             cursor: pointer;
             font-weight: bold;
             transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        .gc-back-btn:hover { background: #ffb703; color: #000; }
+        .gc-back-btn:hover, .gc-team-btn:hover { background: #ffb703; color: #000; }
 
         .gc-ban-banner {
             background: rgba(255, 77, 77, 0.15);
@@ -217,7 +221,7 @@
             width: 100%;
         }
 
-        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333; position: relative; group: msg;}
+        .gc-msg { display: flex; flex-direction: column; max-width: 80%; padding: 12px 15px; border-radius: 10px; background: var(--bg-panel); border: 1px solid #333; position: relative;}
         .gc-header-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; color: #888; gap: 15px;}
         .gc-text { font-size: 15px; color: #ddd; word-break: break-word; line-height: 1.4;}
         
@@ -227,7 +231,7 @@
         .gc-reply-quote { background: rgba(0,0,0,0.3); border-left: 3px solid #888; padding: 5px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 12px; color: #aaa; }
         .gc-reply-quote b { color: var(--accent); }
 
-        .gc-actions { display: none; gap: 10px; position: absolute; top: -12px; right: 10px; background: #061225; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
+        .gc-actions { display: none; gap: 5px; position: absolute; top: -14px; right: 10px; background: #061225; padding: 3px 8px; border-radius: 6px; border: 1px solid #333; }
         .gc-msg:hover .gc-actions { display: flex; }
         .gc-actions button { background: transparent; border: none; cursor: pointer; font-size: 14px; color: #888; padding: 0; }
         .gc-actions button:hover { color: var(--accent); }
@@ -243,13 +247,8 @@
             50% { box-shadow: 0 0 15px rgba(255, 183, 3, 0.7), 0 0 30px rgba(255, 183, 3, 0.4); border-color: rgba(255, 183, 3, 1); }
         }
 
-        .role-owner { 
-            border: 1px solid #ffb703; 
-            background: linear-gradient(90deg, rgba(255,183,3,0.12) 0%, rgba(15,36,66,1) 100%); 
-            animation: ownerGlow 2.5s ease-in-out infinite;
-        }
+        .role-owner { border: 1px solid #ffb703; background: linear-gradient(90deg, rgba(255,183,3,0.12) 0%, rgba(15,36,66,1) 100%); animation: ownerGlow 2.5s ease-in-out infinite; }
         .role-owner .gc-name { color: #ffb703; font-weight: 800; text-shadow: 0 0 8px rgba(255,183,3,0.7); }
-        
         .role-moder { border: 1px solid #ff4d4d; }
         .role-moder .gc-name { color: #ff4d4d; font-weight: 800; }
         .role-tester { border: 1px solid #00d2ff; }
@@ -339,6 +338,8 @@
             .gc-input-wrapper input { padding: 12px; }
             footer { gap: 10px; padding: 15px 10px; }
             .footer-btn { font-size: 13px; }
+            .gc-header { flex-direction: column; align-items: flex-start; gap: 10px;}
+            .gc-header-btns { width: 100%; justify-content: space-between;}
         }
     </style>
 </head>
@@ -489,15 +490,15 @@
         <button class="footer-btn" onclick="openChatModal('support')">
             🆘 Поддержка <span class="notification-badge" id="support-badge">0</span>
         </button>
-        <button class="footer-btn" onclick="openTeamModal()">
-            👥 Команда
-        </button>
     </footer>
 
     <div id="global-chat-screen">
         <div class="gc-header">
             <div class="gc-title">🗣️ Общий чат</div>
-            <button class="gc-back-btn" onclick="closeGlobalChat()">← Назад в магазин</button>
+            <div class="gc-header-btns">
+                <button class="gc-team-btn" onclick="openTeamModal()">👥 Команда</button>
+                <button class="gc-back-btn" onclick="closeGlobalChat()">← Назад</button>
+            </div>
         </div>
         <div class="gc-ban-banner" id="gc-ban-banner"></div>
         <div class="gc-messages-container" id="gc-box"></div>
@@ -515,7 +516,6 @@
         </div>
     </div>
 
-    <!-- Модалка команды -->
     <div class="modal-overlay" id="teamModal">
         <div class="modal">
             <button class="close-modal" onclick="document.getElementById('teamModal').style.display = 'none'">×</button>
@@ -615,7 +615,6 @@
         </div>
     </div>
 
-    <!-- Модалка редактирования сообщения -->
     <div class="modal-overlay" id="editMsgModal">
         <div class="modal">
             <button class="close-modal" onclick="document.getElementById('editMsgModal').style.display = 'none'">×</button>
@@ -819,7 +818,6 @@
             } catch(e) {}
         }
 
-        // --- КОМАНДА ---
         async function openTeamModal() {
             document.getElementById('teamModal').style.display = 'flex';
             const list = document.getElementById('team-list');
@@ -1204,7 +1202,6 @@
             } catch(e) {}
         }
 
-        // --- ОТВЕТЫ И РЕДАКТИРОВАНИЕ ---
         function replyToMessage(msgId, text, name) {
             replyToId = msgId;
             document.getElementById('gc-reply-text').innerHTML = `<b>${name}:</b> ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`;
@@ -1236,7 +1233,23 @@
             if (res.ok) {
                 loadGlobalChat(true);
             } else {
-                showToast('Ошибка редактирования', 'error');
+                const data = await res.json();
+                showToast(data.message || 'Ошибка редактирования', 'error');
+            }
+        }
+
+        async function deleteMsg(msgId) {
+            if (!confirm('Удалить это сообщение?')) return;
+            
+            const res = await fetch('/api/global-chat/delete', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ msgId })
+            });
+            
+            if (res.ok) {
+                loadGlobalChat(true);
+            } else {
+                showToast('Ошибка удаления', 'error');
             }
         }
 
@@ -1246,7 +1259,6 @@
             });
         }
 
-        // --- ЧАТ (ОТРИСОВКА) ---
         async function loadGlobalChat(forceReload = false) {
             const res = await fetch('/api/global-chat');
             if (res.ok) {
@@ -1285,7 +1297,6 @@
                     const isNew = isFirstLoad || idx >= prevCount;
                     const animClass = isNew ? 'gc-new' : '';
 
-                    // Цитата (ответ)
                     let replyHtml = '';
                     if (m.replyTo) {
                         const parentMsg = msgs.find(x => x.id === m.replyTo);
@@ -1294,14 +1305,13 @@
                         }
                     }
 
-                    // Кнопки (редактировать/ответить/копировать)
                     let actionsHtml = `<div class="gc-actions">`;
                     if (m.role !== 'system') {
-                        actionsHtml += `<button onclick="copyMsgText('${m.text.replace(/'/g, "\\'")}')" title="Копировать">📋</button>`;
-                        actionsHtml += `<button onclick="replyToMessage('${m.id}', '${m.text.replace(/'/g, "\\'")}', '${m.name}')" title="Ответить">↩️</button>`;
-                        // Редактировать может только автор
-                        if (m.userId === currentUser.id || m.role === 'owner' && currentUser.role === 'owner') {
-                            actionsHtml += `<button onclick="openEditMsgModal('${m.id}', '${m.text.replace(/'/g, "\\'")}')" title="Редактировать">✏️</button>`;
+                        actionsHtml += `<button onclick="copyMsgText(this.closest('.gc-msg').querySelector('.gc-text').innerText)" title="Копировать">📋</button>`;
+                        actionsHtml += `<button onclick="replyToMessage('${m.id}', '${m.text.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${m.name}')" title="Ответить">↩️</button>`;
+                        if (m.userId === currentUser.id) {
+                            actionsHtml += `<button onclick="openEditMsgModal('${m.id}', this.closest('.gc-msg').querySelector('.gc-text').innerText)" title="Редактировать">✏️</button>`;
+                            actionsHtml += `<button onclick="deleteMsg('${m.id}')" title="Удалить" style="color:#ff4d4d;">🗑️</button>`;
                         }
                     }
                     actionsHtml += `</div>`;
